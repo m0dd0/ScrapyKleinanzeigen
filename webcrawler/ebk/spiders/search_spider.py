@@ -14,7 +14,7 @@ class SearchSpider(scrapy.Spider):
         return int(re.sub("\D", "", string))
 
     def start_requests(self):
-        start_url = "http://https://www.ebay-kleinanzeigen.de/s-katalog-orte.html/"
+        start_url = "https://www.ebay-kleinanzeigen.de/s-katalog-orte.html"
         yield scrapy.Request(url=start_url, callback=self.parse_category_catalog)
 
     def parse_category_catalog(self, response: HtmlResponse):
