@@ -21,11 +21,9 @@ class EbkArticle(scrapy.Item):
     commercial_offer = scrapy.Field()
     image = scrapy.Field()
 
+
 class Category(scrapy.Item):
     timestamp = scrapy.Field()
     name = scrapy.Field()
-    n_childs = scrapy.Field()
     n_articles = scrapy.Field()
     parent = scrapy.Field()
-    url_name = scrapy.Field()
-    code = scrapy.Field()
