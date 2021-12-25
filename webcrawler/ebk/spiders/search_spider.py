@@ -1,10 +1,11 @@
-from time import time
+import re
+from datetime import datetime, timedelta
+
 import scrapy
 from scrapy.http import HtmlResponse
 from scrapy.http.request import Request
+
 from ..items import Category, EbkArticle
-import re
-from datetime import datetime, timedelta
 
 
 class SearchSpider(scrapy.Spider):

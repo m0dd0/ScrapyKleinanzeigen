@@ -6,15 +6,6 @@
 import scrapy
 
 
-class DummyCategory(scrapy.Item):
-    i = scrapy.Field()
-    j = scrapy.Field()
-
-
-class DummyArticle(scrapy.Item):
-    i = scrapy.Field()
-
-
 class EbkArticle(scrapy.Item):
     name = scrapy.Field()
     price = scrapy.Field()
