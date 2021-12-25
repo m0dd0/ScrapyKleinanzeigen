@@ -96,19 +96,29 @@ ITEM_PIPELINES = {
 # HTTPCACHE_IGNORE_HTTP_CODES = []
 # HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
-LOG_ENABLED = False
-Disable default Scrapy log settings.
-configure_logging(install_root_handler=False)
+# these settings only affect the output to stdout, we keep them enabled so we can
+# use commadn line flags etc (This woulndt be possible if we set a streamlogger manually)
+LOG_ENABLED = True  # keep this enabled to still have the "default" stdout ouput
+LOG_LEVEL = logging.DEBUG
+# this is the actual formatting string which is used in the logging.Formatter of scrapys logging handler
+LOG_FORMAT = "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+# this only defines how the different messages type (crawl, item found, ...) look like and which level they have
+# LOG_FORMATTER = 'scrapy.logformatter.LogFormatter'
 
-# Define your logging settings.
+
+# for other handlers than the one to stdout simply add the handlers to the root
+# logger. It seems like all scrapy loggers use the handlers from the root logger.
+# The settings here do not affect the general logging settings at all.
+# configure_logging(install_root_handler=False)
 root_logger = logging.getLogger()
-root_logger.setLevel(logging.INFO)
+# root_logger.setLevel(logging.DEBUG)
 rotating_handler = logging.handlers.TimedRotatingFileHandler(
     Path(__file__).parent / "log" / "DummyScraperLog",
     when="H",
     interval=1,
     backupCount=24,
 )
-rotating_handler.setLevel(logging.DEBUG)
-# rotating_handler.setFormatter() # '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+rotating_handler.setLevel(logging.INFO)
+rotating_handler.setFormatter(LOG_FORMAT)  # use the same log_format
+# TODO set formatter
 root_logger.addHandler(rotating_handler)
