@@ -37,3 +37,29 @@ traffic or to ensure that all articles got scraped.
 A scraper which checks for new categories and updates the json should be run every
 day etc.
 
+## Approximation of needed scraping interval
+Each article page contains 25(+2) articles. 
+We set the interval for crawling to DOWNLOAD_DELAY
+If we directly restart the crawler after it has finished we can scrape at maximum
+25/DOWNLOAD_DELAY articles per second.
+If we want to catch all articles which get uploaded we need to adjust the DOWNLOAD_DELAY
+depending on the uploaded article per second:
+n_ups: uploaded articles per second
+n_page: articles displayed on a single page (=25)
+t_delay: DOWNLOAD_DELAY setting
+
+t_delay = n_page/n_ups
+n_ups = n_page/t_delay
+
+n_ups [n_upm, n_uph]        t_delay
+10 [600, 36.000]            25/10 = 2.5
+40 [2.400, 144.000]         25/40 = 0.625
+100 [6000, 360.000]         25/100 = 0.25 
+
+Auto-Haupt-KAtegorie hat ca 5.000.000 Artikel, was ca 10% der Gesamtmenge an Artikeln
+darstellt. In dieser KAtegorie wurden am 25.12. zwischen 14.13-14.14 Uhr ca 250 Artikel
+hochgeladen (=4 Artikel pro Sekunde). Wenn man dies auf alle Kategorien extrapoliert
+erhält man ca 40 Artike pro Sekunde was einem maximalen DOWNLOAD_DELAY von 0.625s 
+entspricht.
+Man muss allerigs anmerken dass diese Zahl aufgrund von nicht representativer KAtegorie,
+Datum und Tageszeit strak abweichen kann.
