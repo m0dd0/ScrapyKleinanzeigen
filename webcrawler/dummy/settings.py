@@ -114,11 +114,9 @@ root_logger = logging.getLogger()
 # root_logger.setLevel(logging.DEBUG)
 rotating_handler = logging.handlers.TimedRotatingFileHandler(
     Path(__file__).parent / "log" / "DummyScraperLog",
-    when="H",
-    interval=1,
-    backupCount=24,
+    when="midnight",
+    backupCount=30,
 )
 rotating_handler.setLevel(logging.INFO)
 rotating_handler.setFormatter(LOG_FORMAT)  # use the same log_format
-# TODO set formatter
 root_logger.addHandler(rotating_handler)
