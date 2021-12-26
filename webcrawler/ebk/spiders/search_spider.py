@@ -17,6 +17,13 @@ class SearchSpider(scrapy.Spider):
     # start_urls = ["http://https://www.ebay-kleinanzeigen.de/s-katalog-orte.html/"]
 
     def __init__(self, *args, **kwargs):
+        self.max_pages_per_category = max_pages_per_category
+        self.max_articles_per_category = max_articles_per_category
+        self.max_duplocates_per_category = max_duplicates_per_category
+        self.max_article_age = max_article_age  # in seconds
+        # {'category': {'n_pages': int, 'n_articles': int, 'n_duplicates': int}}
+        self.scraped_article_stats = {}
+        self.article_counter = {}
         self.duplicate_counter = {}
         super().__init__(*args, **kwargs)
 
@@ -46,6 +53,12 @@ class SearchSpider(scrapy.Spider):
                 sub_cat_item = sub_cat_loader.load_item()
                 yield sub_cat_item
 
+                self.article_counter[sub_cat_item.name] = {
+                    "n_pages": 0,
+                    "n_articles": 0,
+                    "n_duplicates": 0,
+                }
+
                 sub_cat_a_ = sub_cat_li_.css("a")[0].attrib["href"]
                 article_url_base = response.urljoin(sub_cat_a_)
                 cb_kwargs = {
@@ -66,6 +79,8 @@ class SearchSpider(scrapy.Spider):
     def parse_article_page(
         self, response: HtmlResponse, main_category, sub_category, business_ad
     ):
+        stats = self.article_counter[sub_category]
+
         for article_ in response.css(".aditem"):
             article_loader = ArticleLoader(Article(), article_)
             article_loader.add_value("main_category", main_category)
@@ -97,14 +112,33 @@ class SearchSpider(scrapy.Spider):
                 "pro_shop_link", ".text-module-oneline a::attr(href)"
             )
 
+            stats["n_articles"] += 1
             yield article_loader.load_item()
 
-        if response.meta["sub_category"] in self.finished_categories:
-            return
+            if stats["n_articles"] >= self.max_articles_per_category:
+                self.logger.warning(
+                    f"Aborted crawling of {sub_category} due to maximum number of articles ({self.max_articles_per_category})."
+                )
+                return
+            if stats["n_duplicates"] > self.max_duplocates_per_category:
+                self.logger.info(
+                    f"Aborted crawling of {sub_category} due to maximum number of duplicates ({self.max_duplocates_per_category})."
+                )
+                return
 
-        # if page
+        stats["n_pages"] += 1
+        if stats["n_pages"] >= self.max_pages_per_category:
+            self.logger.warning(
+                f"Aborted crawling of {sub_category} due to maximum number of pages ({self.max_pages_per_category})."
+            )
+            return
 
         yield response.follow(
             response.css("#srchrslt-pagination.pagination-next"),
             callback=self.parse_article_page,
+            cb_kwargs={
+                "main_category": main_category,
+                "sub_category": sub_category,
+                "business_ad": business_ad,
+            },
         )
