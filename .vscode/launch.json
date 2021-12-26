@@ -1,0 +1,20 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "scrapy crawl dummy",
+      "type": "python",
+      "request": "launch",
+      "module": "scrapy",
+      "args": ["crawl", "search_spider_dummy"],
+      "console": "integratedTerminal",
+      "autoReload": {
+        "enable": true
+      },
+      "justMyCode": false
+    }
+  ]
+}

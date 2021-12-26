@@ -1,7 +1,8 @@
-venv
-__pycache__
-.vscode
 data/*
 *.pyc
-log/*.txt
-log/*.log
+*/*/log/*
+venv
+__pycache__
+
+.vscode/*
+!.vscode/launch.json

@@ -8,9 +8,7 @@ try:
         [
             "scrapy",
             "crawl",
-            "search_spider",
-            "-o",
-            "../data/debug_out.json",
+            "search_spider_dummy",
         ]
     )
 except SystemExit:
