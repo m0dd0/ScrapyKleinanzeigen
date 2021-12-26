@@ -10,10 +10,8 @@
       "request": "launch",
       "module": "scrapy",
       "args": ["crawl", "search_spider_dummy"],
+      "cwd": "${workspaceFolder}/webcrawler",
       "console": "integratedTerminal",
-      "autoReload": {
-        "enable": true
-      },
       "justMyCode": false
     }
   ]

@@ -24,7 +24,6 @@ NEWSPIDER_MODULE = "dummy.spiders"
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 # USER_AGENT = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-#'ebk (+http://www.yourdomain.com)'
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
@@ -35,7 +34,7 @@ ROBOTSTXT_OBEY = True
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 0.1
+DOWNLOAD_DELAY = 1
 # The download delay setting will honor only one of:
 # CONCURRENT_REQUESTS_PER_DOMAIN = 16
 # CONCURRENT_REQUESTS_PER_IP = 16
@@ -61,12 +60,7 @@ COOKIES_ENABLED = False
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 # DOWNLOADER_MIDDLEWARES = {
-#     "scrapy.downloadermiddlewares.useragent.UserAgentMiddleware": None,
-#     "scrapy_user_agents.middlewares.RandomUserAgentMiddleware": 500,  # using same priority as disbaled middleware
 # }
-# RANDOM_UA_FILE = str(Path(__file__).parent.parent / "user_agents.txt")
-# RANDOM_UA_TYPE = "random.random"
-# RANDOM_UA_SAME_OS_FAMILY = False
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
