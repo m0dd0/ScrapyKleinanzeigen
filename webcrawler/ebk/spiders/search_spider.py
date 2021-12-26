@@ -7,6 +7,7 @@ from scrapy.http.request import Request
 from scrapy.loader import ItemLoader
 from itemloaders.processors import TakeFirst, MapCompose, Join, Compose
 
+from ..loaders import ArticleLoader, CategoryLoader
 from ..items import Category  # , CategoryLoader  # , EbkArticle
 
 
@@ -16,173 +17,87 @@ class SearchSpider(scrapy.Spider):
     # start_urls = ["http://https://www.ebay-kleinanzeigen.de/s-katalog-orte.html/"]
 
     def __init__(self, *args, **kwargs):
-        self.finished_categories = []
+        self.duplicate_counter = {}
         super().__init__(*args, **kwargs)
-
-    def _integer_from_string(self, string: str):
-        res = re.sub("\D", "", string)
-        if res == "":
-            return None
-        if len(res) > 1:
-            res = res.removeprefix("0")
-        return int(res)
-
-    def _get_article_datetime(self, datestring: str, current_datetime: datetime):
-        datestring = datestring.lower()
-
-        if not re.match("gestern|heute.*", datestring):
-            return None
-
-        yesterday = datestring.startswith("gestern")
-        hour, minute = divmod(self._integer_from_string(datestring), 100)
-
-        article_datetime = datetime(
-            current_datetime.year,
-            current_datetime.month,
-            current_datetime.day,
-            hour,
-            minute,
-            0,
-            0,
-        )
-        if yesterday:
-            article_datetime = article_datetime - timedelta(days=1)
-
-        return article_datetime
 
     def start_requests(self):
         start_url = "https://www.ebay-kleinanzeigen.de/s-katalog-orte.html"
         yield scrapy.Request(url=start_url, callback=self.parse_category_catalog)
 
     def parse_category_catalog(self, response: HtmlResponse):
-        timestamp = int(datetime.now().timestamp())
+        current_timestamp = int(datetime.now().timestamp())
 
         for main_cat_li_ in response.css(".contentbox .l-container-row"):
-            main_cat_loader = ItemLoader(Category(), main_cat_li_)
-            main_cat_loader.add_css("name", ".treelist-headline a::text", TakeFirst())
-            main_cat_loader.add_css(
-                "n_articles", ".treelist-headline .text-light::text"
-            )
-            main_cat_loader.add_value("timestamp", timestamp)
+            main_cat_h2_ = main_cat_li_.css(".treelist-headline")
+            main_cat_loader = CategoryLoader(Category(), main_cat_h2_)
+            main_cat_loader.add_css("name", "a::text")
+            main_cat_loader.add_css("n_articles", ".text-light::text")
+            main_cat_loader.add_value("timestamp", current_timestamp)
             main_cat_loader.add_value("parent", None)
-            yield main_cat_loader.load_item()
+            main_cat_item = main_cat_loader.load_item()
+            yield main_cat_item
 
             for sub_cat_li_ in main_cat_li_.css("ul li"):
-                sub_cat_loader = ItemLoader(Category(), sub_cat_li_)
+                sub_cat_loader = CategoryLoader(Category(), sub_cat_li_)
                 sub_cat_loader.add_css("name", "a::text")
+                sub_cat_loader.add_css("n_articles", ".text-light")
+                sub_cat_loader.add_value("timestamp", current_timestamp)
+                sub_cat_loader.add_value("parent", main_cat_item.name)
+                sub_cat_item = sub_cat_loader.load_item()
+                yield sub_cat_item
 
-            sub_cat_a_ = sub_cat_li_.css("a")[0]
-            sub_cat_name = sub_cat_a_.css("::text").get().strip()
-            sub_cat_articlecount = self._integer_from_string(
-                sub_cat_li_.css(".text-light").get()
-            )
-            yield Category(
-                timestamp=timestamp,
-                name=sub_cat_name,
-                n_articles=sub_cat_articlecount,
-                parent=main_cat_name,
-            )
+                sub_cat_a_ = sub_cat_li_.css("a")[0].attrib["href"]
+                article_url_base = response.urljoin(sub_cat_a_)
+                cb_kwargs = {
+                    "main_category": main_cat_item.name,
+                    "sub_category": sub_cat_item.name,
+                }
+                yield Request(
+                    f"{article_url_base}/anbieter:privat",
+                    callback=self.parse_article_page,
+                    cb_kwargs=cb_kwargs | {"business_ad": False},
+                )
+                yield Request(
+                    f"{article_url_base}/anbieter:gewerblich",
+                    callback=self.parse_article_page,
+                    cb_kwargs=cb_kwargs | {"business_ad": True},
+                )
 
-            # article_url_base = response.urljoin(sub_cat_a_.attrib["href"])
-            # article_request_private = Request(
-            #     f"{article_url_base}/anbieter:privat",
-            #     meta={
-            #         "main_category": main_cat_name,
-            #         "sub_category": sub_cat_name,
-            #         "commercial_offer": False,
-            #     },
-            #     callback=self.parse_article_page,
-            # )
-            # yield article_request_private
-            # article_request_commercial = article_request_private.replace(
-            #     url=f"{article_url_base}/anbieter:gewerblich",
-            # )
-            # yield article_request_commercial
-
-    def parse_article_page(self, response: HtmlResponse):
-        current_datetime = datetime.now()
-
+    def parse_article_page(
+        self, response: HtmlResponse, main_category, sub_category, business_ad
+    ):
         for article_ in response.css(".aditem"):
-            ### information from the top section of the article css
-            # do not use self._integer_from_String since it might contain leading 0
-            postal_code = re.sub(
-                "\D", "", article_.css(".aditem-main--top--left::text").getall()[-1]
-            )
-            article_topright_div_ = article_.css(".aditem-main--top--right")
-            toparticle = bool(article_topright_div_.css(".icon-feature-topad").get())
-            highlight_article = bool(
-                article_topright_div_.css(".icon-feature-highlight").get()
-            )
-            timestamp = None
-            if not toparticle and not highlight_article:
-                timestamp = int(
-                    self._get_article_datetime(
-                        article_topright_div_.css(".icon::text").get(),
-                        current_datetime,
-                    ).timestamp()
-                )
-                if timestamp is None:
-                    # we are already visiting articles older than 2 days
-                    return
+            article_loader = ArticleLoader(Article(), article_)
+            article_loader.add_value("main_category", main_category)
+            article_loader.add_value("sub_category", sub_category)
+            article_loader.add_value("business_ad", business_ad)
+            article_loader.add_css("image_link", ".aditem-image img::attr(src)")
 
-            ### informatio from the middle part of the article css
-            article_middle_div_ = article_.css(".aditem-main--middle")
-            name = article_middle_div_.css("h2 a::text").get()
-            description = (
-                article_middle_div_.css(".aditem-main--middle--description::text")
-                .get()
-                .removesuffix("...")
+            topleft_subloader = article_loader.nested_css(".aditem-main--top--left")
+            topleft_subloader.add_css("postal_code", "::text")
+
+            topright_subloader = article_loader.nested_css(".aditem-main--top--right")
+            topright_subloader.add_css("top_ad", ".icon-feature-topad")
+            topright_subloader.add_css("highlight_ad", ".icon-feature-highlight")
+            topright_subloader.add_css("timestamp", "::text")
+
+            middle_subloader = article_loader.nested_css(".aditem-main--middle")
+            middle_subloader.add_css("name", "h2 a::text")
+            middle_subloader.add_css(
+                "description", ".aditem-main--middle--description::text"
             )
-            price_str = (
-                article_middle_div_.css(".aditem-main--middle--price").get().lower()
+            middle_subloader.add_css("price", ".aditem-main--middle--price::text")
+            middle_subloader.add_css("negotiable", ".aditem-main--middle--price::text")
+
+            bottom_subloader = article_loader.nested_css(".aditem-main--bottom")
+            bottom_subloader.add_css("tags", ".text-module-end.simpletag::text")
+            bottom_subloader.add_css("offer", ".text-module-end.simpletag::text")
+            bottom_subloader.add_css("sendable", ".text-module-end.simpletag::text")
+            bottom_subloader.add_css(
+                "pro_shop_link", ".text-module-oneline a::attr(href)"
             )
-            price = self._integer_from_string(price_str)
-            negotiable = "vb" in price_str
-            if "zu verschenken" in price_str:
-                price = 0
 
-            ### information from the bottom part of the article css
-            article_bottom_div_ = article_.css(".aditem-main--bottom")
-            tags = article_bottom_div_.css(".text-module-end.simpletag::text").getall()
-            tags = [t.lower() for t in tags]
-
-            offer = "gesuch" not in tags
-            if not offer:
-                tags.remove("gesuch")
-            dispatchable = "versand möglich" in tags
-            if dispatchable:
-                tags.remove("versand möglich")
-
-            article_pro_seller_div_ = article_bottom_div_.css(".text-module-oneline")
-            pro_shop_link = None
-            pro_seller = False
-            if article_pro_seller_div_:
-                # pro_seller = bool(
-                #     article_pro_seller_div_.css(".badge-hint-pro-small-srp").get()
-                # )
-                pro_seller = True
-                pro_shop_link = response.urljoin(
-                    article_pro_seller_div_[0].css("a").attrib["href"]
-                )
-
-            yield EbkArticle(
-                name=name,
-                price=price,
-                negotiable=negotiable,
-                postal_code=postal_code,
-                timestamp=timestamp,
-                description=description,
-                dispatchable=dispatchable,
-                offer=offer,
-                tags=tags,
-                main_category=response.meta["main_category"],
-                sub_category=response.meta["sub_category"],
-                commercial_offer=response.meta["commercial_offer"],
-                pro_seller=pro_seller,
-                pro_shop_link=pro_shop_link,
-                toparticle=toparticle,
-                highlight_article=highlight_article,
-            )
+            yield article_loader.load_item()
 
         if response.meta["sub_category"] in self.finished_categories:
             return

@@ -50,5 +50,6 @@ class DumyOrm:
 
 class DatabaseWriterPipeline:
     def process_item(self, item, spider):
-        logging.getLogger(__name__).debug("database pipelein")
-        return DumyOrm()
+        return item
+        # logging.getLogger(__name__).debug("database pipelein")
+        # return DumyOrm()
