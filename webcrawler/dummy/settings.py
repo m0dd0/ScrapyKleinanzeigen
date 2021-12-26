@@ -13,6 +13,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from scrapy.logformatter import LogFormatter
+from scrapy.settings.default_settings import CONCURRENT_ITEMS
 from scrapy.utils.log import configure_logging
 
 
@@ -73,6 +74,12 @@ COOKIES_ENABLED = False
 ITEM_PIPELINES = {
     "dummy.pipelines.DummyPipeline": 300,
 }
+# even if it seems that the crawler always waits for every until an item is processed
+# until the next item is requested to be yield we add this low limit
+# this ensures that in case of thhe detection of a duplicated scraped article
+# we have enough time to set the according flag to inform the spider that
+# no next article page requests shall be yielded
+CONCURRENT_ITEMS = 10
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
