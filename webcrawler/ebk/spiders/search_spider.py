@@ -4,8 +4,10 @@ from datetime import datetime, timedelta
 import scrapy
 from scrapy.http import HtmlResponse
 from scrapy.http.request import Request
+from scrapy.loader import ItemLoader
+from itemloaders.processors import TakeFirst, MapCompose, Join, Compose
 
-from ..items import Category, EbkArticle
+from ..items import Category  # , CategoryLoader  # , EbkArticle
 
 
 class SearchSpider(scrapy.Spider):
@@ -56,48 +58,46 @@ class SearchSpider(scrapy.Spider):
         timestamp = int(datetime.now().timestamp())
 
         for main_cat_li_ in response.css(".contentbox .l-container-row"):
-            main_cat_h2_ = main_cat_li_.css(".treelist-headline")[0]
+            main_cat_loader = ItemLoader(Category(), main_cat_li_)
+            main_cat_loader.add_css("name", ".treelist-headline a::text", TakeFirst())
+            main_cat_loader.add_css(
+                "n_articles", ".treelist-headline .text-light::text"
+            )
+            main_cat_loader.add_value("timestamp", timestamp)
+            main_cat_loader.add_value("parent", None)
+            yield main_cat_loader.load_item()
 
-            main_cat_name = main_cat_h2_.css("a::text").get().strip()
-            main_cat_articlecount = self._integer_from_string(
-                main_cat_h2_.css(".text-light::text").get()
+            for sub_cat_li_ in main_cat_li_.css("ul li"):
+                sub_cat_loader = ItemLoader(Category(), sub_cat_li_)
+                sub_cat_loader.add_css("name", "a::text")
+
+            sub_cat_a_ = sub_cat_li_.css("a")[0]
+            sub_cat_name = sub_cat_a_.css("::text").get().strip()
+            sub_cat_articlecount = self._integer_from_string(
+                sub_cat_li_.css(".text-light").get()
             )
             yield Category(
                 timestamp=timestamp,
-                name=main_cat_name,
-                n_articles=main_cat_articlecount,
-                parent=None,
+                name=sub_cat_name,
+                n_articles=sub_cat_articlecount,
+                parent=main_cat_name,
             )
 
-            for sub_cat_li_ in main_cat_li_.css("ul li"):
-                sub_cat_a_ = sub_cat_li_.css("a")[0]
-
-                sub_cat_name = sub_cat_a_.css("::text").get().strip()
-                sub_cat_articlecount = self._integer_from_string(
-                    sub_cat_li_.css(".text-light").get()
-                )
-                yield Category(
-                    timestamp=timestamp,
-                    name=sub_cat_name,
-                    n_articles=sub_cat_articlecount,
-                    parent=main_cat_name,
-                )
-
-                article_url_base = response.urljoin(sub_cat_a_.attrib["href"])
-                article_request_private = Request(
-                    f"{article_url_base}/anbieter:privat",
-                    meta={
-                        "main_category": main_cat_name,
-                        "sub_category": sub_cat_name,
-                        "commercial_offer": False,
-                    },
-                    callback=self.parse_article_page,
-                )
-                yield article_request_private
-                article_request_commercial = article_request_private.replace(
-                    url=f"{article_url_base}/anbieter:gewerblich",
-                )
-                yield article_request_commercial
+            # article_url_base = response.urljoin(sub_cat_a_.attrib["href"])
+            # article_request_private = Request(
+            #     f"{article_url_base}/anbieter:privat",
+            #     meta={
+            #         "main_category": main_cat_name,
+            #         "sub_category": sub_cat_name,
+            #         "commercial_offer": False,
+            #     },
+            #     callback=self.parse_article_page,
+            # )
+            # yield article_request_private
+            # article_request_commercial = article_request_private.replace(
+            #     url=f"{article_url_base}/anbieter:gewerblich",
+            # )
+            # yield article_request_commercial
 
     def parse_article_page(self, response: HtmlResponse):
         current_datetime = datetime.now()

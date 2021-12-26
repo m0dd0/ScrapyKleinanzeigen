@@ -17,10 +17,10 @@ from scrapy.settings.default_settings import CONCURRENT_ITEMS
 from scrapy.utils.log import configure_logging
 
 
-BOT_NAME = "ebk_dummy"
+BOT_NAME = "ebk"
 
-SPIDER_MODULES = ["dummy.spiders"]
-NEWSPIDER_MODULE = "dummy.spiders"
+SPIDER_MODULES = ["ebk.spiders"]
+NEWSPIDER_MODULE = "ebk.spiders"
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
@@ -72,7 +72,7 @@ COOKIES_ENABLED = False
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    "dummy.pipelines.DummyPipeline": 300,
+    "ebk.pipelines.DatabaseWriterPipeline": 300,
 }
 # even if it seems that the crawler always waits for every until an item is processed
 # until the next item is requested to be yield we add this low limit

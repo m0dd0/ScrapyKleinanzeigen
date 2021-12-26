@@ -63,3 +63,6 @@ erhält man ca 40 Artike pro Sekunde was einem maximalen DOWNLOAD_DELAY von 0.62
 entspricht.
 Man muss allerigs anmerken dass diese Zahl aufgrund von nicht representativer KAtegorie,
 Datum und Tageszeit strak abweichen kann.
+
+## idead
+Scrape more filtered metadata on article count in different regions/citys depending on category.
