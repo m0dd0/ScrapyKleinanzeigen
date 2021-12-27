@@ -16,22 +16,22 @@ from typing import List
 
 @dataclass
 class EbkArticle:
-    name: str
-    price: int
-    negotiable: bool
-    postal_code: str
-    timestamp: int
-    description: str
-    sendable: str
-    offer: bool
-    tags: List[str]
-    main_category: str
-    sub_category: str
-    business_ad: bool
-    image_link: str
-    pro_shop_link: str
-    top_ad: bool
-    highlight_ad: bool
+    name: str = field(default=None)
+    price: int = field(default=None)
+    negotiable: bool = field(default=None)
+    postal_code: str = field(default=None)
+    timestamp: int = field(default=None)
+    description: str = field(default=None)
+    sendable: str = field(default=None)
+    offer: bool = field(default=None)
+    tags: List[str] = field(default=None)
+    main_category: str = field(default=None)
+    sub_category: str = field(default=None)
+    business_ad: bool = field(default=None)
+    image_link: str = field(default=None)
+    pro_shop_link: str = field(default=None)
+    top_ad: bool = field(default=None)
+    highlight_ad: bool = field(default=None)
 
 
 @dataclass

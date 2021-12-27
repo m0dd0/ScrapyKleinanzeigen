@@ -5,11 +5,17 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "scrapy crawl dummy",
+      "name": "scrapy crawl",
       "type": "python",
       "request": "launch",
       "module": "scrapy",
-      "args": ["crawl", "search_spider_dummy"],
+      "args": [
+        "crawl",
+        "search_spider",
+        "--loglevel=DEBUG",
+        "-a",
+        "categories_to_scrawl=Autos"
+      ],
       "cwd": "${workspaceFolder}/webcrawler",
       "console": "integratedTerminal",
       "justMyCode": false
