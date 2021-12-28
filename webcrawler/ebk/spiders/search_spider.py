@@ -1,5 +1,4 @@
 from datetime import datetime
-from pprint import pformat
 from tabulate import tabulate
 
 import scrapy
@@ -163,21 +162,19 @@ class SearchSpider(scrapy.Spider):
         return f"Aborted crawling of {sub_category} ({business_type_mapping[is_business]}) due to "
 
     def _check_abortion_page(self, articles, sub_category, is_business_ad):
-        abortion_message_base = self._get_abortion_message_base(
-            sub_category, is_business_ad
-        )
+        abortion_message = self._get_abortion_message_base(sub_category, is_business_ad)
         stats = self.scraping_stats.get_category(sub_category, is_business_ad)
 
         if len(articles) == 0:
             self.scraping_stats.add_abortion_reaseon(
                 sub_category, is_business_ad, "blocked"
             )
-            self.logger.info(f"{abortion_message_base} blocked website.")
+            self.logger.info(f"{abortion_message} blocked website.")
             return True
 
         if stats["pages"] >= self.max_pages_per_category:
             self.logger.warning(
-                f"{abortion_message_base} maximum number of pages ({self.max_pages_per_category})."
+                f"{abortion_message} maximum number of pages ({self.max_pages_per_category})."
             )
             self.scraping_stats.add_abortion_reaseon(
                 sub_category, is_business_ad, "pages"
@@ -188,15 +185,13 @@ class SearchSpider(scrapy.Spider):
 
     def _check_abortion_article(self, article_item, sub_category, is_business_ad):
         current_timestamp = int(datetime.now().timestamp())
-        abortion_message_base = self._get_abortion_message_base(
-            sub_category, is_business_ad
-        )
+        abortion_message = self._get_abortion_message_base(sub_category, is_business_ad)
         stats = self.scraping_stats.get_category(sub_category, is_business_ad)
 
         if article_item.timestamp:  # top_ads no not have a timestamp
             if current_timestamp - article_item.timestamp > self.max_article_age:
                 self.logger.warning(
-                    f"{abortion_message_base} age of article ({self.max_article_age}s)."
+                    f"{abortion_message} age of article ({self.max_article_age}s)."
                 )
                 self.scraping_stats.add_abortion_reaseon(
                     sub_category, is_business_ad, "timestamp"
@@ -205,7 +200,7 @@ class SearchSpider(scrapy.Spider):
 
         if stats["articles"] >= self.max_articles_per_category:
             self.logger.warning(
-                f"{abortion_message_base} number of articles ({self.max_articles_per_category})."
+                f"{abortion_message} number of articles ({self.max_articles_per_category})."
             )
             self.scraping_stats.add_abortion_reaseon(
                 sub_category, is_business_ad, "articles"
@@ -214,7 +209,7 @@ class SearchSpider(scrapy.Spider):
 
         if stats["duplicates"] > self.max_duplicates_per_category:
             self.logger.info(
-                f"{abortion_message_base} number of duplicates ({self.max_duplicates_per_category})."
+                f"{abortion_message} number of duplicates ({self.max_duplicates_per_category})."
             )
             self.scraping_stats.add_abortion_reaseon(
                 sub_category, is_business_ad, "duplicates"
@@ -230,7 +225,6 @@ class SearchSpider(scrapy.Spider):
         sub_category: str,
         is_business_ad: bool,
     ):
-        # TODO adjust loffer so that crawled page has INFO level
         self.scraping_stats.increase_count(sub_category, is_business_ad, "pages")
 
         articles_ = response.css(".aditem")

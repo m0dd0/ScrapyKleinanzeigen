@@ -66,3 +66,11 @@ Datum und Tageszeit strak abweichen kann.
 
 ## idead
 Scrape more filtered metadata on article count in different regions/citys depending on category.
+
+## ban protection
+visitting website with browser manually: 141pages/1.33 min --> <1s Download Delay
+but even if using a DOWNLOAD_DELAY of 3s > 1s scraper gets blocked
+If scraper blocked website can still be accessed via browser BUT only if cookies are enabled in browser
+--> Detection is done via cookies somehow
+running scraper with cookies enabled and DOWNLOAD_DELAY=3 and "normal" USER_AGENT still results in blocking
+--> Trying rotating proxies
