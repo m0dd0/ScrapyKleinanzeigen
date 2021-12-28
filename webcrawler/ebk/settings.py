@@ -115,7 +115,7 @@ LOG_LEVEL = logging.INFO
 # this is the actual formatting string which is used in the logging.Formatter of scrapys logging handler
 LOG_FORMAT = "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
 # this only defines how the different messages type (crawl, item found, ...) look like and which level they have
-# LOG_FORMATTER = 'scrapy.logformatter.LogFormatter'
+LOG_FORMATTER = "ebk.logging.CustomLogFormatter"
 
 
 # for other handlers than the one to stdout simply add the handlers to the root
