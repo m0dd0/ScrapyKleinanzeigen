@@ -9,13 +9,8 @@
 
 
 import logging
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
-
-from scrapy.logformatter import LogFormatter
-from scrapy.settings.default_settings import CONCURRENT_ITEMS
-from scrapy.utils.log import configure_logging
-
+import re
 
 BOT_NAME = "ebk"
 
@@ -38,7 +33,7 @@ ROBOTSTXT_OBEY = True
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 3
+DOWNLOAD_DELAY = 0.1
 # The download delay setting will honor only one of:
 # CONCURRENT_REQUESTS_PER_DOMAIN = 16
 # CONCURRENT_REQUESTS_PER_IP = 16
@@ -63,10 +58,17 @@ COOKIES_ENABLED = True
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-# DOWNLOADER_MIDDLEWARES = {
-#     "scrapy.downloadermiddlewares.useragent.UserAgentMiddleware": None,
-#     "ebk.middlewares.RotatingUserAgentsMiddleware": 500,
-# }
+DOWNLOADER_MIDDLEWARES = {
+    "rotating_proxies.middlewares.RotatingProxyMiddleware": 610,
+    "rotating_proxies.middlewares.BanDetectionMiddleware": 620,
+    #     "scrapy.downloadermiddlewares.useragent.UserAgentMiddleware": None,
+    #     "ebk.middlewares.RotatingUserAgentsMiddleware": 500,
+}
+with open(Path(__file__).parent / "proxies.txt") as file:
+    ROTATING_PROXY_LIST = re.findall("\d+.\d+.\d+.\d+:\d+", file.read())
+# ROTATING_PROXY_LIST_PATH = str(Path(__file__).parent / "proxies.txt")
+ROTATING_PROXY_PAGE_RETRY_TIMES = 1
+ROTATING_PROXY_LOGSTATS_INTERVAL = 10
 # ROTATING_USER_AGENTS = Path(__file__).parent / "useragents.json"
 # ROTATING_USER_AGENTS_SHUFFLE = False
 
