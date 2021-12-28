@@ -38,9 +38,10 @@ class ScrapingStats:
         self._data[(name, business)]["abortion_reason"] = reason
 
     def __repr__(self):
+        business_type_mapping = {None: "all", True: "gewerblich", False: "privat"}
         return tabulate(
             [
-                {"category": f"{k[0]} ({'gewerblich' if k[1] else 'privat'})"} | v
+                {"category": f"{k[0]} ({business_type_mapping[k[1]]})"} | v
                 for k, v in self._data.items()
             ],
             headers="keys",
@@ -59,6 +60,7 @@ class SearchSpider(scrapy.Spider):
         max_duplicates_per_category=2,
         max_article_age=60 * 60 * 24,
         categories_to_scrawl=None,
+        seperate_business_ads=True,
         *args,
         **kwargs,
     ):
@@ -69,6 +71,15 @@ class SearchSpider(scrapy.Spider):
         self.categories_to_scrawl = categories_to_scrawl
         if self.categories_to_scrawl is not None:
             self.categories_to_scrawl = self.categories_to_scrawl.split(",")
+        self.seperate_business_ads = seperate_business_ads in (
+            True,
+            "y",
+            "yes",
+            "true",
+            "True",
+            "1",
+        )
+
         self.scraping_stats = ScrapingStats()
 
         super().__init__(*args, **kwargs)
@@ -112,9 +123,6 @@ class SearchSpider(scrapy.Spider):
         for sub_cat_loader, sub_cat_link in sub_categories.values():
             sub_cat_item = sub_cat_loader.load_item()
 
-            self.scraping_stats.add_category(sub_cat_item.name, True)
-            self.scraping_stats.add_category(sub_cat_item.name, False)
-
             yield sub_cat_item
 
             if self.categories_to_scrawl is not None:
@@ -122,27 +130,50 @@ class SearchSpider(scrapy.Spider):
                     self.logger.info(f"Skipping category {sub_cat_item.name}.")
                     continue
 
-            article_url_parts = response.urljoin(sub_cat_link).split("/")
-            article_url_parts.insert(-1, "anbieter:{gewerblich_privat}")
-            article_url_base = "/".join(article_url_parts)
             cb_kwargs = {
                 "main_category": main_cat_item.name,
                 "sub_category": sub_cat_item.name,
             }
-            yield Request(
-                article_url_base.format(gewerblich_privat="privat"),
-                callback=self.parse_article_page,
-                cb_kwargs=cb_kwargs | {"is_business_ad": False},
-            )
-            yield Request(
-                article_url_base.format(gewerblich_privat="gewerblich"),
-                callback=self.parse_article_page,
-                cb_kwargs=cb_kwargs | {"is_business_ad": True},
-            )
+            if not self.seperate_business_ads:
+                self.scraping_stats.add_category(sub_cat_item.name, None)
+                yield response.follow(
+                    sub_cat_link,
+                    callback=self.parse_article_page,
+                    cb_kwargs=cb_kwargs | {"is_business_ad": None},
+                )
+            else:
+                self.scraping_stats.add_category(sub_cat_item.name, True)
+                self.scraping_stats.add_category(sub_cat_item.name, False)
+                article_url_parts = response.urljoin(sub_cat_link).split("/")
+                article_url_parts.insert(-1, "anbieter:{gewerblich_privat}")
+                article_url_base = "/".join(article_url_parts)
+                yield Request(
+                    article_url_base.format(gewerblich_privat="privat"),
+                    callback=self.parse_article_page,
+                    cb_kwargs=cb_kwargs | {"is_business_ad": False},
+                )
+                yield Request(
+                    article_url_base.format(gewerblich_privat="gewerblich"),
+                    callback=self.parse_article_page,
+                    cb_kwargs=cb_kwargs | {"is_business_ad": True},
+                )
+
+    def _get_abortion_message_base(self, sub_category: str, is_business: bool):
+        business_type_mapping = {None: "all", True: "gewerblich", False: "privat"}
+        return f"Aborted crawling of {sub_category} ({business_type_mapping[is_business]}) due to "
 
     def _check_abortion_page(self, articles, sub_category, is_business_ad):
-        abortion_message_base = f"Aborted crawling of {sub_category} ({'gewerblich' if is_business_ad else 'privat'}) due to"
+        abortion_message_base = self._get_abortion_message_base(
+            sub_category, is_business_ad
+        )
         stats = self.scraping_stats.get_category(sub_category, is_business_ad)
+
+        if len(articles) == 0:
+            self.scraping_stats.add_abortion_reaseon(
+                sub_category, is_business_ad, "blocked"
+            )
+            self.logger.info(f"{abortion_message_base} blocked website.")
+            return True
 
         if stats["pages"] >= self.max_pages_per_category:
             self.logger.warning(
@@ -153,18 +184,13 @@ class SearchSpider(scrapy.Spider):
             )
             return True
 
-        if len(articles) == 0:
-            self.scraping_stats.add_abortion_reaseon(
-                sub_category, is_business_ad, "blocked"
-            )
-            self.logger.info(f"{abortion_message_base} blocked website.")
-            return True
-
         return False
 
     def _check_abortion_article(self, article_item, sub_category, is_business_ad):
         current_timestamp = int(datetime.now().timestamp())
-        abortion_message_base = f"Aborted crawling of {sub_category} ({'gewerblich' if is_business_ad else 'privat'}) due to maximum"
+        abortion_message_base = self._get_abortion_message_base(
+            sub_category, is_business_ad
+        )
         stats = self.scraping_stats.get_category(sub_category, is_business_ad)
 
         if article_item.timestamp:  # top_ads no not have a timestamp

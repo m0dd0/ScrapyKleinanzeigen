@@ -1,0 +1,1 @@
+iex "scrapy crawl search_spider --loglevel=INFO -O ../test.json -a max_pages_per_category=1 -a max_articles_per_category=10000 -a max_article_age=300"
