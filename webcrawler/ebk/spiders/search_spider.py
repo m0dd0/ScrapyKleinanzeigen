@@ -1,5 +1,6 @@
 from datetime import datetime
-import json
+from pprint import pformat
+from tabulate import tabulate
 
 import scrapy
 from scrapy.http import HtmlResponse
@@ -33,6 +34,18 @@ class ScrapingStats:
     def category_exists(self, name, business):
         return bool(self._data.get((name, business)))
 
+    def add_abortion_reaseon(self, name, business, reason):
+        self._data[(name, business)]["abortion_reason"] = reason
+
+    def __repr__(self):
+        return tabulate(
+            [
+                {"category": f"{k[0]} ({'gewerblich' if k[1] else 'privat'})"} | v
+                for k, v in self._data.items()
+            ],
+            headers="keys",
+        )
+
 
 class SearchSpider(scrapy.Spider):
     name = "search_spider"
@@ -44,7 +57,7 @@ class SearchSpider(scrapy.Spider):
         max_pages_per_category=3,
         max_articles_per_category=100,
         max_duplicates_per_category=2,
-        max_article_age=60 * 60 * 48,
+        max_article_age=60 * 60 * 24,
         categories_to_scrawl=None,
         *args,
         **kwargs,
@@ -109,38 +122,97 @@ class SearchSpider(scrapy.Spider):
                     self.logger.info(f"Skipping category {sub_cat_item.name}.")
                     continue
 
-            article_url_base = response.urljoin(sub_cat_link)
+            article_url_parts = response.urljoin(sub_cat_link).split("/")
+            article_url_parts.insert(-1, "anbieter:{gewerblich_privat}")
+            article_url_base = "/".join(article_url_parts)
             cb_kwargs = {
                 "main_category": main_cat_item.name,
                 "sub_category": sub_cat_item.name,
             }
             yield Request(
-                f"{article_url_base}/anbieter:privat",
+                article_url_base.format(gewerblich_privat="privat"),
                 callback=self.parse_article_page,
-                cb_kwargs=cb_kwargs | {"business_ad": False},
+                cb_kwargs=cb_kwargs | {"is_business_ad": False},
             )
             yield Request(
-                f"{article_url_base}/anbieter:gewerblich",
+                article_url_base.format(gewerblich_privat="gewerblich"),
                 callback=self.parse_article_page,
-                cb_kwargs=cb_kwargs | {"business_ad": True},
+                cb_kwargs=cb_kwargs | {"is_business_ad": True},
             )
+
+    def _check_abortion_page(self, articles, sub_category, is_business_ad):
+        abortion_message_base = f"Aborted crawling of {sub_category} ({'gewerblich' if is_business_ad else 'privat'}) due to"
+        stats = self.scraping_stats.get_category(sub_category, is_business_ad)
+
+        if stats["pages"] >= self.max_pages_per_category:
+            self.logger.warning(
+                f"{abortion_message_base} maximum number of pages ({self.max_pages_per_category})."
+            )
+            self.scraping_stats.add_abortion_reaseon(
+                sub_category, is_business_ad, "pages"
+            )
+            return True
+
+        if len(articles) == 0:
+            self.scraping_stats.add_abortion_reaseon(
+                sub_category, is_business_ad, "blocked"
+            )
+            self.logger.info(f"{abortion_message_base} blocked website.")
+            return True
+
+        return False
+
+    def _check_abortion_article(self, article_item, sub_category, is_business_ad):
+        current_timestamp = int(datetime.now().timestamp())
+        abortion_message_base = f"Aborted crawling of {sub_category} ({'gewerblich' if is_business_ad else 'privat'}) due to maximum"
+        stats = self.scraping_stats.get_category(sub_category, is_business_ad)
+
+        if article_item.timestamp:  # top_ads no not have a timestamp
+            if current_timestamp - article_item.timestamp > self.max_article_age:
+                self.logger.warning(
+                    f"{abortion_message_base} age of article ({self.max_article_age}s)."
+                )
+                self.scraping_stats.add_abortion_reaseon(
+                    sub_category, is_business_ad, "timestamp"
+                )
+                return True
+
+        if stats["articles"] >= self.max_articles_per_category:
+            self.logger.warning(
+                f"{abortion_message_base} number of articles ({self.max_articles_per_category})."
+            )
+            self.scraping_stats.add_abortion_reaseon(
+                sub_category, is_business_ad, "articles"
+            )
+            return True
+
+        if stats["duplicates"] > self.max_duplicates_per_category:
+            self.logger.info(
+                f"{abortion_message_base} number of duplicates ({self.max_duplicates_per_category})."
+            )
+            self.scraping_stats.add_abortion_reaseon(
+                sub_category, is_business_ad, "duplicates"
+            )
+            return True
+
+        return False
 
     def parse_article_page(
         self,
         response: HtmlResponse,
         main_category: str,
         sub_category: str,
-        business_ad: bool,
+        is_business_ad: bool,
     ):
-        current_timestamp = int(datetime.now().timestamp())
-        abortion_message_base = f"Aborted crawling of {sub_category} ({'gewerblich' if business_ad else 'privat'}) due to maximum"
-        stats = self.scraping_stats.get_category(sub_category, business_ad)
+        # TODO adjust loffer so that crawled page has INFO level
+        self.scraping_stats.increase_count(sub_category, is_business_ad, "pages")
 
-        for article_ in response.css(".aditem"):
+        articles_ = response.css(".aditem")
+        for article_ in articles_:
             article_loader = ArticleLoader(EbkArticle(), article_)
             article_loader.add_value("main_category", main_category)
             article_loader.add_value("sub_category", sub_category)
-            article_loader.add_value("business_ad", business_ad)
+            article_loader.add_value("business_ad", is_business_ad)
             article_loader.add_css("image_link", ".aditem-image img::attr(src)")
 
             topleft_subloader = article_loader.nested_css(".aditem-main--top--left")
@@ -168,31 +240,13 @@ class SearchSpider(scrapy.Spider):
             )
 
             article_item = article_loader.load_item()
-            self.scraping_stats.increase_count(sub_category, business_ad, "articles")
+            self.scraping_stats.increase_count(sub_category, is_business_ad, "articles")
             yield article_item
 
-            if article_item.timestamp:  # top_ads no not have a timestamp
-                if current_timestamp - article_item.timestamp > self.max_article_age:
-                    self.logger.warning(
-                        f"{abortion_message_base} age of article ({self.max_article_age}s)."
-                    )
-                    return
-            if stats["articles"] >= self.max_articles_per_category:
-                self.logger.warning(
-                    f"{abortion_message_base} number of articles ({self.max_articles_per_category})."
-                )
-                return
-            if stats["duplicates"] > self.max_duplicates_per_category:
-                self.logger.info(
-                    f"{abortion_message_base} number of duplicates ({self.max_duplicates_per_category})."
-                )
+            if self._check_abortion_article(article_item, sub_category, is_business_ad):
                 return
 
-        stats["pages"] += 1
-        if stats["pages"] >= self.max_pages_per_category:
-            self.logger.warning(
-                f"{abortion_message_base} number of pages ({self.max_pages_per_category})."
-            )
+        if self._check_abortion_page(articles_, sub_category, is_business_ad):
             return
 
         req = response.follow(
@@ -201,7 +255,10 @@ class SearchSpider(scrapy.Spider):
             cb_kwargs={
                 "main_category": main_category,
                 "sub_category": sub_category,
-                "business_ad": business_ad,
+                "is_business_ad": is_business_ad,
             },
         )
         yield req
+
+    def closed(self, reason):
+        self.logger.info(f"\n{self.scraping_stats}")

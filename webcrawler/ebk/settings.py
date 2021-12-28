@@ -24,7 +24,7 @@ NEWSPIDER_MODULE = "ebk.spiders"
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-# USER_AGENT = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+USER_AGENT = "a very nice noncommerical crawler but not the Googlebot"  # "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
@@ -35,7 +35,7 @@ ROBOTSTXT_OBEY = True
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 1
+DOWNLOAD_DELAY = 0.1
 # The download delay setting will honor only one of:
 # CONCURRENT_REQUESTS_PER_DOMAIN = 16
 # CONCURRENT_REQUESTS_PER_IP = 16
@@ -61,7 +61,11 @@ COOKIES_ENABLED = False
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 # DOWNLOADER_MIDDLEWARES = {
+#     "scrapy.downloadermiddlewares.useragent.UserAgentMiddleware": None,
+#     "ebk.middlewares.RotatingUserAgentsMiddleware": 500,
 # }
+# ROTATING_USER_AGENTS = Path(__file__).parent / "useragents.json"
+# ROTATING_USER_AGENTS_SHUFFLE = False
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html

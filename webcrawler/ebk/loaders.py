@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timedelta
+from typing import List
 
 from itemloaders import ItemLoader
 from itemloaders.processors import MapCompose, TakeFirst, Compose, Identity
@@ -43,7 +44,14 @@ def _get_article_datetime(datestring: str):
         return article_datetime
 
     else:
-        raise NotImplementedError(f"{datestring}")
+        return datetime.strptime(datestring, "%d.%m.%Y")
+
+
+def _save_first(l: List):
+    if len(l) == 0:
+        return None
+    else:
+        return l[0]
 
 
 class CategoryLoader(ItemLoader):
@@ -56,12 +64,12 @@ class CategoryLoader(ItemLoader):
 class ArticleLoader(ItemLoader):
     name_out = TakeFirst()
     price_out = Compose(
-        lambda v: v[0],
+        _save_first,
         str.lower,
         lambda v: {True: "0", False: v}["zu verschenken" in v],
         _integer_from_string,
     )
-    negotiable_out = Compose(lambda v: v[0], str.lower, lambda v: "vb" in v)
+    negotiable_out = Compose(_save_first, str.lower, lambda v: "vb" in v)
     postal_code_out = Compose(lambda v: re.sub("\D", "", v[-1]))
     timestamp_out = Compose(
         lambda v: v[-1], _get_article_datetime, lambda v: int(v.timestamp())
