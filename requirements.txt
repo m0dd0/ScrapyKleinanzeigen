@@ -1,3 +1,2 @@
 Scrapy==2.5.1
 tabulate==0.8.9
-scrapy-rotating-proxies==0.6.2
