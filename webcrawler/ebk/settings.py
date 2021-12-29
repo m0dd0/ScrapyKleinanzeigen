@@ -2,6 +2,7 @@
 
 import logging
 from pathlib import Path
+from datetime import datetime
 
 BOT_NAME = "ebk"
 
@@ -49,7 +50,12 @@ ITEM_PIPELINES = {
     "ebk.pipelines.DatabaseWriterPipe": 400,
 }
 
-DATABASE_URL = f"sqlite:///{Path(__file__).parent.parent.parent / 'data' / 'test.db'}"
+database_path = (
+    Path(__file__).parent.parent.parent
+    / "data"
+    / f"ebk_data__{datetime.now().strftime('%Y_%m_%d')}.db"
+)
+DATABASE_URL = f"sqlite:///{database_path}"
 DATABASE_COMMIT_DELTA = 1000
 CRAWLING_META_PATH = Path(__file__).parent / "log" / "crawling_statitics.csv"
 
