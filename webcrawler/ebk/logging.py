@@ -12,7 +12,7 @@ class CustomLogFormatter(logformatter.LogFormatter):
 
     def dropped(self, item, exception, response, spider):
         res = super().dropped(item, exception, response, spider)
-        res["level"] = logging.INFO
+        res["level"] = logging.DEBUG
         # res["msg"] = "Dropped: %(exception)s" + os.linesep + "%(item)s"
         # if isinstance(item, EbkArticle):
         #     item_name_encoded = item.name.encode("utf-8")

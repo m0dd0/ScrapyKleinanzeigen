@@ -61,9 +61,9 @@ class DatabaseWriterPipe:
         if isinstance(item, EbkArticle):
             article_orm = EbkArticleORM.from_item(item)
             if self._is_duplicate(article_orm):
-                # spider.scraping_stats.increment_counter(
-                #     article_orm.sub_category, article_orm.is_business_ad, "duplicates"
-                # )
+                spider.scraping_stats.increment_counter(
+                    article_orm.sub_category, article_orm.is_business_ad, "duplicates"
+                )
                 raise scrapy.exceptions.DropItem("Dropped duplicated article.")
             else:
                 self.session.add(article_orm)

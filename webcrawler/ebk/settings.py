@@ -17,7 +17,7 @@ USER_AGENT = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot
 
 ROBOTSTXT_OBEY = True
 
-DOWNLOAD_DELAY = 0.1
+DOWNLOAD_DELAY = 1
 # The download delay setting will honor only one of:
 # CONCURRENT_REQUESTS_PER_DOMAIN = 16
 # CONCURRENT_REQUESTS_PER_IP = 16
@@ -56,7 +56,7 @@ ITEM_PIPELINES = {
 # no next article page requests shall be yielded
 CONCURRENT_ITEMS = 10
 
-DATABASE_URL = f"sqlite:///{Path(__file__).parent.parent.parent / 'data' / 'test2.db'}"
+DATABASE_URL = f"sqlite:///{Path(__file__).parent.parent.parent / 'data' / 'test3.db'}"
 DATABASE_COMMIT_DELTA = 100
 
 LOGSTATS_INTERVAL = 10

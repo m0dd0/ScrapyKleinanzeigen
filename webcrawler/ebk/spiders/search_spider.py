@@ -18,7 +18,7 @@ class ScrapingStats:
         self._data[(name, business)] = {
             "pages": 0,
             "articles": 0,
-            # "duplicates": 0,
+            "duplicates": 0,
         }
 
     def increment_counter(self, name, business, counter):
@@ -77,6 +77,7 @@ class SearchSpider(scrapy.Spider):
         )
 
         self.scraping_stats = ScrapingStats()
+        self.start_timestamp = int(datetime.now().timestamp())
 
         self._yielded_subcategory_names = []
 
@@ -179,7 +180,7 @@ class SearchSpider(scrapy.Spider):
             self.scraping_stats.add_abortion_reaseon(
                 sub_category, is_business_ad, "blocked"
             )
-            self.logger.info(f"{abortion_message} blocked website.")
+            self.logger.warning(f"{abortion_message} blocked website.")
             return True
 
         if stats["pages"] >= self.max_pages_per_category:
@@ -194,13 +195,12 @@ class SearchSpider(scrapy.Spider):
         return False
 
     def _check_abortion_article(self, article_item, sub_category, is_business_ad):
-        current_timestamp = int(datetime.now().timestamp())
         abortion_message = self._get_abortion_message_base(sub_category, is_business_ad)
         stats = self.scraping_stats.get_category(sub_category, is_business_ad)
 
         if article_item.timestamp:  # top_ads no not have a timestamp
-            if current_timestamp - article_item.timestamp > self.max_article_age:
-                self.logger.warning(
+            if self.start_timestamp - article_item.timestamp > self.max_article_age:
+                self.logger.info(
                     f"{abortion_message} age of article ({self.max_article_age}s)."
                 )
                 self.scraping_stats.add_abortion_reaseon(
