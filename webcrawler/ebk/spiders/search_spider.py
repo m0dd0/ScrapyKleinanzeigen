@@ -62,15 +62,19 @@ class SearchSpider(scrapy.Spider):
         if max_pages is not None:
             max_pages = int(max_pages)
         self.max_pages = max_pages
+        self.logger.info(f"max_pages: {self.max_pages}")
         if max_articles is not None:
             max_articles = int(max_articles)
         self.max_articles = max_articles
+        self.logger.info(f"max_articles: {self.max_articles}")
         if max_age is not None:
             max_age = int(max_age)  # in seconds
         self.max_age = max_age
+        self.logger.info(f"max_age: {self.max_age}")
         if categories is not None:
             categories = categories.split(",")
         self.categories = categories
+        self.logger.info(f"categories: {self.categories}")
 
         self.seperate_business_ads = seperate_business_ads in (
             True,
