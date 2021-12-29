@@ -51,22 +51,23 @@ class SearchSpider(scrapy.Spider):
 
     def __init__(
         self,
-        max_pages_per_category=3,
-        max_articles_per_category=100,
-        # max_duplicates_per_category=2,
-        max_article_age=60 * 60 * 24,
-        categories_to_scrawl=None,
+        max_pages=50,
+        max_articles=None,
+        max_age=None,
+        categories=None,
         seperate_business_ads=True,
         *args,
         **kwargs,
     ):
-        self.max_pages_per_category = int(max_pages_per_category)
-        self.max_articles_per_category = int(max_articles_per_category)
-        # self.max_duplicates_per_category = int(max_duplicates_per_category)
-        self.max_article_age = int(max_article_age)  # in seconds
-        self.categories_to_scrawl = categories_to_scrawl
-        if self.categories_to_scrawl is not None:
-            self.categories_to_scrawl = self.categories_to_scrawl.split(",")
+        if max_age is not None:
+            self.max_pages = int(max_pages)
+        if max_articles is None:
+            self.max_articles = int(max_articles)
+        if max_age is not None:
+            self.max_age = int(max_age)  # in seconds
+        if categories is not None:
+            self.categories = categories.split(",")
+
         self.seperate_business_ads = seperate_business_ads in (
             True,
             "y",
@@ -78,7 +79,6 @@ class SearchSpider(scrapy.Spider):
 
         self.scraping_stats = ScrapingStats()
         self.start_timestamp = int(datetime.now().timestamp())
-
         self._yielded_subcategory_names = []
 
         super().__init__(*args, **kwargs)
@@ -88,10 +88,10 @@ class SearchSpider(scrapy.Spider):
         yield scrapy.Request(url=start_url, callback=self.parse_category_catalog)
 
     def _follow_sub_category(self, response, main_cat_item, sub_cat_item, sub_cat_link):
-        if self.categories_to_scrawl is not None:
+        if self.categories is not None:
             if not (
-                sub_cat_item.name in self.categories_to_scrawl
-                or sub_cat_item.parent in self.categories_to_scrawl
+                sub_cat_item.name in self.categories
+                or sub_cat_item.parent in self.categories
             ):
                 self.logger.info(f"Skipping category {sub_cat_item.name}.")
                 return []
@@ -183,9 +183,9 @@ class SearchSpider(scrapy.Spider):
             self.logger.warning(f"{abortion_message} blocked website.")
             return True
 
-        if stats["pages"] >= self.max_pages_per_category:
+        if self.max_pages is not None and stats["pages"] >= self.max_pages:
             self.logger.warning(
-                f"{abortion_message} maximum number of pages ({self.max_pages_per_category})."
+                f"{abortion_message} maximum number of pages ({self.max_pages})."
             )
             self.scraping_stats.add_abortion_reaseon(
                 sub_category, is_business_ad, "pages"
@@ -198,19 +198,20 @@ class SearchSpider(scrapy.Spider):
         abortion_message = self._get_abortion_message_base(sub_category, is_business_ad)
         stats = self.scraping_stats.get_category(sub_category, is_business_ad)
 
-        if article_item.timestamp:  # top_ads no not have a timestamp
-            if self.start_timestamp - article_item.timestamp > self.max_article_age:
-                self.logger.info(
-                    f"{abortion_message} age of article ({self.max_article_age}s)."
-                )
-                self.scraping_stats.add_abortion_reaseon(
-                    sub_category, is_business_ad, "timestamp"
-                )
-                return True
+        if (
+            self.max_age is not None
+            and article_item.timestamp  # top_ads no not have a timestamp
+            and self.start_timestamp - article_item.timestamp > self.max_age
+        ):
+            self.logger.info(f"{abortion_message} age of article ({self.max_age}s).")
+            self.scraping_stats.add_abortion_reaseon(
+                sub_category, is_business_ad, "timestamp"
+            )
+            return True
 
-        if stats["articles"] >= self.max_articles_per_category:
+        if self.max_articles is not None and stats["articles"] >= self.max_articles:
             self.logger.warning(
-                f"{abortion_message} number of articles ({self.max_articles_per_category})."
+                f"{abortion_message} number of articles ({self.max_articles})."
             )
             self.scraping_stats.add_abortion_reaseon(
                 sub_category, is_business_ad, "articles"

@@ -83,22 +83,22 @@ First idea was to detect if a number of articles have been scraped already. In t
 we already visited them and therfore we also already visited the next/upcoming ones and we
 can abort the crawling of this category.
 However in praxis this didnt work: Even if we have a empty database we started detecting
-multiple duplicates in the first run (which shouldnt be posible). Therefore we aborted
-to early. Ther are multiple possible reasons for this wrong behaviour:
-    - programming error
-    - not thread safe statistics
-    - "next" page shows articles from previous page
-    - inconsitent loading of the next page
-As it is hard to debug/reproduce this error we now reasonm the abortion only by the age
-of the visited articles:
+multiple duplicates in the first run (which shouldnt be posible).
+After some investigation it turned out that using the next page link will not automatically
+give a full list of "fresh" articles. There are likely some articles shown in page
+1 ansd 2. This effect appears only when using the scraper.
+As an alternative the abortion is now only executed by the age of the visited articles:
 The maximum age of artticles in a scrawling session is set so that there point of insertion
 must eb bfeore the end of the last scrawling run + an delta of some minutes.
 This will lead to some articles being scrawled multiple time but they are still 
 detected as duplicates and will get dropped accordingly.
 
-For now: We scrawl onc every 30min. We set the maximum age of the articles to 45min.
-Or more general: WE scrawl once every n min. We set the maximum age of articles to n*1,5 min.
+--> We scrawl once every n min. 
+We set the maximum age of articles to (n+delta_upload)+2 min.
+delta_upload ~ 2
 
 n shouldnt be to low because in a less popular category this would mean that we scrawl
 them without gaining any new (or only very few articles).
-On the other side n shouldnt be to high to avoid missing articles in popular categories.
+On the other side n shouldnt be to high to avoid missing articles in popular categories
+because they are already on page 50+.
+--> scrape every 10 minutes with an max age of 15min.

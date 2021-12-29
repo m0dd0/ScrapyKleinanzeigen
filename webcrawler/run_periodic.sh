@@ -1,0 +1,1 @@
+scrapy crawl search_spider --loglevel=INFO -O ../data/last_run.json -a max_pages_per_category=49 -a max_articles_per_category=1000 -a max_article_age=36000
