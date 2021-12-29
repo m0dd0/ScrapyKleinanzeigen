@@ -36,6 +36,7 @@ class EbkArticle:
     top_ad: bool = field(default=None)
     highlight_ad: bool = field(default=None)
     link: str = field(default=None)
+    crawl_timestamp: int = field(default=None)
 
 
 @dataclass

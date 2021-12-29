@@ -96,3 +96,4 @@ class ArticleLoader(ItemLoader):
     link_out = Compose(
         lambda v: v[0], lambda v: f"https://www.ebay-kleinanzeigen.de{v}"
     )
+    crawl_timestamp_out = TakeFirst()

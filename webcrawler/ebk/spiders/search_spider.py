@@ -264,7 +264,7 @@ class SearchSpider(scrapy.Spider):
             article_loader.add_value("main_category", main_category)
             article_loader.add_value("sub_category", sub_category)
             article_loader.add_value("is_business_ad", is_business_ad)
-            article_loader.add_value("crawl_id", self.crawl_id)
+            article_loader.add_value("crawl_timestamp", self.start_timestamp)
             article_loader.add_css("image_link", ".aditem-image img::attr(src)")
 
             topleft_subloader = article_loader.nested_css(".aditem-main--top--left")
