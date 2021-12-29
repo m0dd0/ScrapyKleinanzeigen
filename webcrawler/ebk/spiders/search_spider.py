@@ -21,7 +21,7 @@ class ScrapingStats:
             "duplicates": 0,
         }
 
-    def increase_count(self, name, business, counter):
+    def increment_counter(self, name, business, counter):
         self._data[(name, business)][counter] += 1
 
     def get_count(self, name, business, counter):
@@ -157,9 +157,9 @@ class SearchSpider(scrapy.Spider):
                     cb_kwargs=cb_kwargs | {"is_business_ad": True},
                 )
 
-    def _get_abortion_message_base(self, sub_category: str, is_business: bool):
+    def _get_abortion_message_base(self, sub_category: str, is_business_ad: bool):
         business_type_mapping = {None: "all", True: "gewerblich", False: "privat"}
-        return f"Aborted crawling of {sub_category} ({business_type_mapping[is_business]}) due to "
+        return f"Aborted crawling of {sub_category} ({business_type_mapping[is_business_ad]}) due to "
 
     def _check_abortion_page(self, articles, sub_category, is_business_ad):
         abortion_message = self._get_abortion_message_base(sub_category, is_business_ad)
@@ -225,14 +225,14 @@ class SearchSpider(scrapy.Spider):
         sub_category: str,
         is_business_ad: bool,
     ):
-        self.scraping_stats.increase_count(sub_category, is_business_ad, "pages")
+        self.scraping_stats.increment_counter(sub_category, is_business_ad, "pages")
 
         articles_ = response.css(".aditem")
         for article_ in articles_:
             article_loader = ArticleLoader(EbkArticle(), article_)
             article_loader.add_value("main_category", main_category)
             article_loader.add_value("sub_category", sub_category)
-            article_loader.add_value("business_ad", is_business_ad)
+            article_loader.add_value("is_business_ad", is_business_ad)
             article_loader.add_css("image_link", ".aditem-image img::attr(src)")
 
             topleft_subloader = article_loader.nested_css(".aditem-main--top--left")
@@ -260,7 +260,9 @@ class SearchSpider(scrapy.Spider):
             )
 
             article_item = article_loader.load_item()
-            self.scraping_stats.increase_count(sub_category, is_business_ad, "articles")
+            self.scraping_stats.increment_counter(
+                sub_category, is_business_ad, "articles"
+            )
             yield article_item
 
             if self._check_abortion_article(article_item, sub_category, is_business_ad):

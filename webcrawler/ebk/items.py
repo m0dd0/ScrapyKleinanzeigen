@@ -30,7 +30,7 @@ class EbkArticle:
     tags: List[str] = field(default=None)
     main_category: str = field(default=None)
     sub_category: str = field(default=None)
-    business_ad: bool = field(default=None)
+    is_business_ad: bool = field(default=None)
     image_link: str = field(default=None)
     pro_shop_link: str = field(default=None)
     top_ad: bool = field(default=None)
@@ -65,7 +65,7 @@ class EbkArticleORM(Base):
     tags = sa.Column(sa.String)  # TODO maybe use mapping/normalization if needed
     main_category = sa.Column(sa.String)
     sub_category = sa.Column(sa.String)
-    business_ad = sa.Column(sa.Boolean)
+    is_business_ad = sa.Column(sa.Boolean)
     image_link = sa.Column(sa.String)
     pro_shop_link = sa.Column(sa.String)
     top_ad = sa.Column(sa.Boolean)
@@ -84,7 +84,7 @@ class EbkArticleORM(Base):
         tags,
         main_category,
         sub_category,
-        business_ad,
+        is_business_ad,
         image_link,
         pro_shop_link,
         top_ad,
@@ -101,7 +101,7 @@ class EbkArticleORM(Base):
         self.tags = str(tags)
         self.main_category = main_category
         self.sub_category = sub_category
-        self.business_ad = business_ad
+        self.is_business_ad = is_business_ad
         self.image_link = image_link
         self.pro_shop_link = pro_shop_link
         self.top_ad = top_ad

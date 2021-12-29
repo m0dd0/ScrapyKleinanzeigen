@@ -86,7 +86,7 @@ class ArticleLoader(ItemLoader):
     )
     main_category_out = TakeFirst()
     sub_category_out = TakeFirst()
-    business_ad_out = TakeFirst()
+    is_business_ad_out = TakeFirst()
     image_link_out = TakeFirst()
     pro_shop_link_out = Compose(_save_first)
     top_ad_out = Compose(bool)

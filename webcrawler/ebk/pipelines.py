@@ -36,34 +36,43 @@ class DatabaseWriterPipe:
         #     engine,
         # )
 
+    def _is_duplicate(self, article):
+        # return (
+        #     (self.last_items["name"] == article.name)
+        #     & (self.last_items["timestamp"] == article.timestamp)
+        #     & (self.last_items["price"] == article.price)
+        #     & (self.last_items["sub_category"] == article.sub_category)
+        #     & (self.last_items["postal_code"] == article.postal_code)
+        # ).any()
+        return self.session.query(
+            sa.sql.exists().where(
+                sa.and_(
+                    EbkArticleORM.name == article.name,
+                    EbkArticleORM.timestamp == article.timestamp,
+                    EbkArticleORM.price == article.price,
+                    EbkArticleORM.sub_category == article.sub_category,
+                    EbkArticleORM.postal_code == article.postal_code,
+                )
+            )
+        ).scalar()
+
     def process_item(self, item, spider):
         if isinstance(item, EbkArticle):
-            # if (
-            #     (self.last_items["name"] == item.name)
-            #     & (self.last_items["price"] == item.price)
-            # ).any():
             article_orm = EbkArticleORM.from_item(item)
-            # if self.session.query(
-            #     sa.sql.exists().where(
-            #         sa.and_(
-            #             EbkArticleORM.name == article_orm.name,
-            #             EbkArticleORM.timestamp == article_orm.timestamp,
-            #             EbkArticleORM.price == article_orm.price,
-            #             EbkArticleORM.sub_category == article_orm.sub_category,
-            #             EbkArticleORM.postal_code == article_orm.postal_code,
-            #         )
-            #     )
-            # ):
-            #     spider.statistics.increment_counter(
-            #         item.sub_category, item.is_business_ad, "duplicates"
-            #     )
-            #     raise scrapy.exceptions.DropItem("Dropped duplicated article.")
-            self.session.add(article_orm)
+            if self._is_duplicate(article_orm):
+                spider.scraping_stats.increment_counter(
+                    article_orm.sub_category, article_orm.is_business_ad, "duplicates"
+                )
+                raise scrapy.exceptions.DropItem("Dropped duplicated article.")
+            else:
+                self.session.add(article_orm)
+
         elif isinstance(item, Category):
             self.session.add(CategoryORM.from_item(item))
 
         if len(self.session.new) >= self.commit_delta:
             self.session.commit()
+
         return item
 
     def close_spider(self, spider):
