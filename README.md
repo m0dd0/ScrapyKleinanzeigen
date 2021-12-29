@@ -56,15 +56,10 @@ n_ups [n_upm, n_uph]        t_delay
 40 [2.400, 144.000]         25/40 = 0.625
 100 [6000, 360.000]         25/100 = 0.25 
 
-Auto-Haupt-KAtegorie hat ca 5.000.000 Artikel, was ca 10% der Gesamtmenge an Artikeln
-darstellt. In dieser KAtegorie wurden am 25.12. zwischen 14.13-14.14 Uhr ca 250 Artikel
-hochgeladen (=4 Artikel pro Sekunde). Wenn man dies auf alle Kategorien extrapoliert
-erhält man ca 40 Artike pro Sekunde was einem maximalen DOWNLOAD_DELAY von 0.625s 
-entspricht.
-Man muss allerigs anmerken dass diese Zahl aufgrund von nicht representativer KAtegorie,
-Datum und Tageszeit strak abweichen kann.
+Its open to test how many articles are uploaded per minute to see if it is realistic
+to scrawl evers article.
 
-## idead
+## idea
 Scrape more filtered metadata on article count in different regions/citys depending on category.
 
 ## ban protection

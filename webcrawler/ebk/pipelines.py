@@ -1,12 +1,4 @@
-import logging
-import scrapy
-from scrapy.utils.project import get_project_settings
-import sqlalchemy as sa
-import sqlalchemy.orm as orm
-import pandas as pd
-from datetime import datetime
-
-from .items import Category, CategoryORM, EbkArticle, EbkArticleORM, Base
+from .items import Category, CategoryORM, EbkArticle, EbkArticleORM
 
 # as noted in the items.py file in this project only dataclasses are used,
 # so we dont use the item adapter and instead use the dataclass syntax consistetly
@@ -16,13 +8,6 @@ from .items import Category, CategoryORM, EbkArticle, EbkArticleORM, Base
 class DatabaseWriterPipe:
     def __init__(self):
         pass
-
-    def open_spider(self, spider):
-        database_url = get_project_settings().get("DATABASE_URL")
-        engine = sa.create_engine(database_url)
-        Base.metadata.create_all(engine)
-        self.session = orm.sessionmaker(bind=engine)()
-        self.commit_delta = get_project_settings().get("DATABASE_COMMIT_DELTA")
 
     # def _is_duplicate(self, article):
     #     return self.session.query(
@@ -50,15 +35,15 @@ class DatabaseWriterPipe:
             #         article_orm.sub_category, article_orm.is_business_ad, "duplicates"
             #     )
             #     raise scrapy.exceptions.DropItem("Dropped duplicated article.")
-            self.session.add(article_orm)
+            spider.session.add(article_orm)
 
         elif isinstance(item, Category):
-            self.session.add(CategoryORM.from_item(item))
+            spider.session.add(CategoryORM.from_item(item))
 
-        if len(self.session.new) >= self.commit_delta:
-            self.session.commit()
+        if len(spider.session.new) >= spider.commit_delta:
+            spider.session.commit()
 
         return item
 
     def close_spider(self, spider):
-        self.session.commit()
+        spider.session.commit()

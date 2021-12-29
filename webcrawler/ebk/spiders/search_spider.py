@@ -4,9 +4,12 @@ from tabulate import tabulate
 import scrapy
 from scrapy.http import HtmlResponse
 from scrapy.http.request import Request
+from scrapy.utils.project import get_project_settings
+import sqlalchemy as sa
+import sqlalchemy.orm as orm
 
 from ..loaders import ArticleLoader, CategoryLoader
-from ..items import Category, EbkArticle
+from ..items import Category, EbkArticle, Base
 
 
 class ScrapingStats:
@@ -87,6 +90,12 @@ class SearchSpider(scrapy.Spider):
         self.scraping_stats = ScrapingStats()
         self.start_timestamp = int(datetime.now().timestamp())
         self._yielded_subcategory_names = []
+
+        database_url = get_project_settings().get("DATABASE_URL")
+        engine = sa.create_engine(database_url)
+        Base.metadata.create_all(engine)
+        self.session = orm.sessionmaker(bind=engine)()
+        self.commit_delta = get_project_settings().get("DATABASE_COMMIT_DELTA")
 
         super().__init__(*args, **kwargs)
 
@@ -306,3 +315,5 @@ class SearchSpider(scrapy.Spider):
 
     def closed(self, reason):
         self.logger.info(f"\n{self.scraping_stats}")
+
+        self.session.add()

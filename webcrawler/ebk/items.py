@@ -1,4 +1,6 @@
 from dataclasses import dataclass, field, asdict
+from os import name, times
+from time import time
 from typing import List
 
 import sqlalchemy as sa
@@ -72,6 +74,7 @@ class EbkArticleORM(Base):
     top_ad = sa.Column(sa.Boolean)
     highlight_ad = sa.Column(sa.Boolean)
     link = sa.Column(sa.String)
+    crawl = sa.
 
     def __init__(
         self,
@@ -137,3 +140,34 @@ class CategoryORM(Base):
     @classmethod
     def from_item(cls, item):
         return cls(**asdict(item))
+
+
+class CategoryCrawl(Base):
+    __tablename__ = "crawlings"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    timestamp = sa.Column(sa.Integer)
+    duration = sa.Column(sa.Integer)
+    name = sa.Column(sa.String)
+    is_business = sa.Column(sa.Boolean)
+    n_pages = sa.Column(sa.Integer)
+    n_articles = sa.Column(sa.Integer)
+    abortion_reason = sa.Column(sa.String)
+
+    def __init__(
+        self,
+        timestamp,
+        duration,
+        name,
+        is_business,
+        n_pages,
+        n_articles,
+        abortion_reason,
+    ):
+        self.timestamp = timestamp
+        self.name = name
+        self.duration = duration
+        self.n_pages = n_pages
+        self.is_business = is_business
+        self.n_articles = n_articles
+        self.abortion_reason = abortion_reason
