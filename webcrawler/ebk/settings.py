@@ -49,15 +49,8 @@ ITEM_PIPELINES = {
     "ebk.pipelines.DatabaseWriterPipe": 400,
 }
 
-# even if it seems that the crawler always waits for every until an item is processed
-# until the next item is requested to be yield we add this low limit
-# this ensures that in case of thhe detection of a duplicated scraped article
-# we have enough time to set the according flag to inform the spider that
-# no next article page requests shall be yielded
-CONCURRENT_ITEMS = 10
-
 DATABASE_URL = f"sqlite:///{Path(__file__).parent.parent.parent / 'data' / 'test.db'}"
-DATABASE_COMMIT_DELTA = 100
+DATABASE_COMMIT_DELTA = 1000
 
 LOGSTATS_INTERVAL = 10
 
@@ -77,7 +70,7 @@ LOG_FORMATTER = "ebk.logging.CustomLogFormatter"
 root_logger = logging.getLogger()
 # root_logger.setLevel(logging.DEBUG)
 rotating_handler = logging.handlers.TimedRotatingFileHandler(
-    Path(__file__).parent / "log" / "DummyScraperLog",
+    Path(__file__).parent / "log" / "EbkScraperLog",
     when="midnight",
     backupCount=30,
 )

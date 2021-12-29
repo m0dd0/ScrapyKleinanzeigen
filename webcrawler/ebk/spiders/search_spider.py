@@ -18,7 +18,6 @@ class ScrapingStats:
         self._data[(name, business)] = {
             "pages": 0,
             "articles": 0,
-            "duplicates": 0,
         }
 
     def increment_counter(self, name, business, counter):

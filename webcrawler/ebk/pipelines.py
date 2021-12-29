@@ -24,49 +24,33 @@ class DatabaseWriterPipe:
         self.session = orm.sessionmaker(bind=engine)()
         self.commit_delta = get_project_settings().get("DATABASE_COMMIT_DELTA")
 
-        # last_timestamp = int(datetime.now().timestamp()) - spider.max_article_age * 1.5
-        # self.last_items = pd.read_sql_query(
-        #     self.session.query(
-        #         EbkArticleORM.timestamp,
-        #         EbkArticleORM.name,
-        #         EbkArticleORM.price,
-        #         EbkArticleORM.sub_category,
-        #         EbkArticleORM.postal_code,
-        #     ).where(EbkArticleORM.timestamp > last_timestamp),
-        #     engine,
-        # )
-
-    def _is_duplicate(self, article):
-        # return (
-        #     (self.last_items["name"] == article.name)
-        #     & (self.last_items["timestamp"] == article.timestamp)
-        #     & (self.last_items["price"] == article.price)
-        #     & (self.last_items["sub_category"] == article.sub_category)
-        #     & (self.last_items["postal_code"] == article.postal_code)
-        # ).any()
-        return self.session.query(
-            sa.sql.exists().where(
-                sa.and_(
-                    EbkArticleORM.name == article.name,
-                    EbkArticleORM.timestamp == article.timestamp,
-                    EbkArticleORM.price == article.price,
-                    EbkArticleORM.sub_category == article.sub_category,
-                    EbkArticleORM.postal_code == article.postal_code,
-                    EbkArticleORM.top_ad == False,
-                )
-            )
-        ).scalar()
+    # def _is_duplicate(self, article):
+    #     return self.session.query(
+    #         sa.sql.exists().where(
+    #             sa.and_(
+    #                 EbkArticleORM.name == article.name,
+    #                 EbkArticleORM.timestamp == article.timestamp,
+    #                 EbkArticleORM.price == article.price,
+    #                 EbkArticleORM.sub_category == article.sub_category,
+    #                 EbkArticleORM.postal_code == article.postal_code,
+    #                 EbkArticleORM.top_ad == False,
+    #             )
+    #         )
+    #     ).scalar()
 
     def process_item(self, item, spider):
         if isinstance(item, EbkArticle):
             article_orm = EbkArticleORM.from_item(item)
-            if self._is_duplicate(article_orm):
-                spider.scraping_stats.increment_counter(
-                    article_orm.sub_category, article_orm.is_business_ad, "duplicates"
-                )
-                raise scrapy.exceptions.DropItem("Dropped duplicated article.")
-            else:
-                self.session.add(article_orm)
+            # filtering take a lot of time (nearly doubles the needed time for scraping)
+            # therfore we do not filter while scraping and instead filter the database
+            # also duplicate filtering does not work suffiently
+            # afterwads
+            # if False: self._is_duplicate(article_orm):
+            #     spider.scraping_stats.increment_counter(
+            #         article_orm.sub_category, article_orm.is_business_ad, "duplicates"
+            #     )
+            #     raise scrapy.exceptions.DropItem("Dropped duplicated article.")
+            self.session.add(article_orm)
 
         elif isinstance(item, Category):
             self.session.add(CategoryORM.from_item(item))
