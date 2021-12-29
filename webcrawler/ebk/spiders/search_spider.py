@@ -1,6 +1,8 @@
 from datetime import datetime
-from tabulate import tabulate
+import csv
+from pathlib import Path
 
+from tabulate import tabulate
 import scrapy
 from scrapy.http import HtmlResponse
 from scrapy.http.request import Request
@@ -22,7 +24,7 @@ class ScrapingStats:
             "pages": 0,
             "articles": 0,
         }
-        self._set_start(name, business)
+        # self._set_start(name, business)
 
     def increment_counter(self, name, business, counter):
         self._data[(name, business)][counter] += 1
@@ -36,10 +38,27 @@ class ScrapingStats:
     def add_abortion_reaseon(self, name, business, reason):
         self._data[(name, business)]["abortion_reason"] = reason
 
-    def _set_start(self, name, business):
-        self._data[(name, business)]["start_timestamp"] = int(
-            datetime.now().timestamp()
-        )
+    def save_to_csv(self, csv_path, additional_columns=None):
+        if additional_columns is None:
+            additional_columns = {}
+        rows = [
+            additional_columns | {"category": c, "are_business_ads": b} | d
+            for (c, b), d in self._data.items()
+        ]
+        file_exists = Path(csv_path).exists()
+        with open(csv_path, "a", newline="") as csvfile:
+            dict_writer = csv.DictWriter(csvfile, rows[0].keys())
+            if not file_exists:
+                dict_writer.writeheader()
+            dict_writer.writerows(rows)
+
+    # def _set_start(self, name, business):
+    #     self._data[(name, business)]["time"] = int(datetime.now().timestamp())
+
+    # def stop_time(self, name, business):
+    #     started_timestamp = self._data[(name, business)]["time"]
+    #     now_timestamp = int(datetime.now().timestamp())
+    #     self._data[(name, business)]["time"] = started_timestamp - now_timestamp
 
     def __repr__(self):
         business_type_mapping = {None: "all", True: "gewerblich", False: "privat"}
@@ -102,6 +121,7 @@ class SearchSpider(scrapy.Spider):
         Base.metadata.create_all(engine)
         self.session = orm.sessionmaker(bind=engine)()
         self.commit_delta = get_project_settings().get("DATABASE_COMMIT_DELTA")
+        self.crawling_meta_path = get_project_settings().get("CRAWLING_META_PATH")
 
         super().__init__(*args, **kwargs)
 
@@ -319,4 +339,7 @@ class SearchSpider(scrapy.Spider):
         )
 
     def closed(self, reason):
+        duration = int(datetime.now().timestamp()) - self.start_timestamp
+        additional_columns = {"timestamp": self.start_timestamp, "duration": duration}
+        self.scraping_stats.save_to_csv(self.crawling_meta_path, additional_columns)
         self.logger.info(f"\n{self.scraping_stats}")

@@ -51,6 +51,7 @@ ITEM_PIPELINES = {
 
 DATABASE_URL = f"sqlite:///{Path(__file__).parent.parent.parent / 'data' / 'test.db'}"
 DATABASE_COMMIT_DELTA = 1000
+CRAWLING_META_PATH = Path(__file__).parent / "log" / "crawling_statitics.csv"
 
 LOGSTATS_INTERVAL = 10
 
