@@ -2,6 +2,7 @@ from dataclasses import dataclass, field, asdict
 from typing import List
 
 import sqlalchemy as sa
+from sqlalchemy import orm
 
 # DESIGN DESCISSION:
 # we will use only dataclass as item type
@@ -47,7 +48,7 @@ class Category:
 
 ### ORM MAPPERS
 
-Base = sa.orm.declarative_base()
+Base = orm.declarative_base()
 
 
 class EbkArticleORM(Base):

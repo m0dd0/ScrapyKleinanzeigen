@@ -6,6 +6,7 @@ from scrapy.http import HtmlResponse
 from scrapy.http.request import Request
 from scrapy.utils.project import get_project_settings
 import sqlalchemy as sa
+from sqlalchemy import orm
 
 from ..loaders import ArticleLoader, CategoryLoader
 from ..items import Category, EbkArticle, Base
