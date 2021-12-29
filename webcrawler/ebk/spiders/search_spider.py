@@ -336,9 +336,7 @@ class SearchSpider(scrapy.Spider):
     def closed(self, reason):
         duration = int(datetime.now().timestamp()) - self.start_timestamp
         additional_columns = {"timestamp": self.start_timestamp, "duration": duration}
-        rows = self.scraping_stats.as_list_of_dicts(
-            self.crawling_meta_path, additional_columns
-        )
+        rows = self.scraping_stats.as_list_of_dicts(additional_columns)
 
         file_exists = Path(self.crawling_meta_path).exists()
         with open(self.crawling_meta_path, "a", newline="") as csvfile:
