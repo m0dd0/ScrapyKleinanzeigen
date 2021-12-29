@@ -6,7 +6,6 @@ from scrapy.http import HtmlResponse
 from scrapy.http.request import Request
 from scrapy.utils.project import get_project_settings
 import sqlalchemy as sa
-import sqlalchemy.orm as orm
 
 from ..loaders import ArticleLoader, CategoryLoader
 from ..items import Category, EbkArticle, Base
@@ -22,6 +21,7 @@ class ScrapingStats:
             "pages": 0,
             "articles": 0,
         }
+        self._set_start(name, business)
 
     def increment_counter(self, name, business, counter):
         self._data[(name, business)][counter] += 1
@@ -34,6 +34,11 @@ class ScrapingStats:
 
     def add_abortion_reaseon(self, name, business, reason):
         self._data[(name, business)]["abortion_reason"] = reason
+
+    def _set_start(self, name, business):
+        self._data[(name, business)]["start_timestamp"] = int(
+            datetime.now().timestamp()
+        )
 
     def __repr__(self):
         business_type_mapping = {None: "all", True: "gewerblich", False: "privat"}
@@ -151,8 +156,6 @@ class SearchSpider(scrapy.Spider):
             ]
 
     def parse_category_catalog(self, response: HtmlResponse):
-        current_timestamp = int(datetime.now().timestamp())
-
         self._yielded_subcategory_names = []
 
         for main_cat_li_ in response.css(".contentbox .l-container-row"):
@@ -160,7 +163,7 @@ class SearchSpider(scrapy.Spider):
             main_cat_loader = CategoryLoader(Category(), main_cat_h2_)
             main_cat_loader.add_css("name", "a::text")
             main_cat_loader.add_css("n_articles", ".text-light::text")
-            main_cat_loader.add_value("timestamp", current_timestamp)
+            main_cat_loader.add_value("timestamp", self.start_timestamp)
             main_cat_loader.add_value("parent", None)
             main_cat_item = main_cat_loader.load_item()
             yield main_cat_item
@@ -170,7 +173,7 @@ class SearchSpider(scrapy.Spider):
                 sub_cat_loader = CategoryLoader(Category(), sub_cat_li_)
                 sub_cat_loader.add_css("name", "a::text")
                 sub_cat_loader.add_css("n_articles", ".text-light")
-                sub_cat_loader.add_value("timestamp", current_timestamp)
+                sub_cat_loader.add_value("timestamp", self.start_timestamp)
                 sub_cat_loader.add_value("parent", main_cat_item.name)
 
                 sub_cat_link = sub_cat_li_.css("a::attr(href)").get()
@@ -260,6 +263,7 @@ class SearchSpider(scrapy.Spider):
             article_loader.add_value("main_category", main_category)
             article_loader.add_value("sub_category", sub_category)
             article_loader.add_value("is_business_ad", is_business_ad)
+            article_loader.add_value("crawl_id", self.crawl_id)
             article_loader.add_css("image_link", ".aditem-image img::attr(src)")
 
             topleft_subloader = article_loader.nested_css(".aditem-main--top--left")
@@ -299,12 +303,12 @@ class SearchSpider(scrapy.Spider):
         if self._check_abortion_page(articles_, sub_category, is_business_ad):
             return
 
-        nex_page_url = response.css(".pagination-next::attr(href)").get()
-        if nex_page_url is None:
+        next_page_url = response.css(".pagination-next::attr(href)").get()
+        if next_page_url is None:
             return
 
         yield response.follow(
-            nex_page_url,
+            next_page_url,
             callback=self.parse_article_page,
             cb_kwargs={
                 "main_category": main_category,
@@ -315,5 +319,3 @@ class SearchSpider(scrapy.Spider):
 
     def closed(self, reason):
         self.logger.info(f"\n{self.scraping_stats}")
-
-        self.session.add()

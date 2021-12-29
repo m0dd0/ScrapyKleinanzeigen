@@ -1,10 +1,7 @@
 from dataclasses import dataclass, field, asdict
-from os import name, times
-from time import time
 from typing import List
 
 import sqlalchemy as sa
-import sqlalchemy.orm as orm
 
 # DESIGN DESCISSION:
 # we will use only dataclass as item type
@@ -50,7 +47,7 @@ class Category:
 
 ### ORM MAPPERS
 
-Base = orm.declarative_base()
+Base = sa.orm.declarative_base()
 
 
 class EbkArticleORM(Base):
@@ -74,7 +71,7 @@ class EbkArticleORM(Base):
     top_ad = sa.Column(sa.Boolean)
     highlight_ad = sa.Column(sa.Boolean)
     link = sa.Column(sa.String)
-    crawl = sa.
+    crawl_timestamp = sa.Column(sa.Integer)
 
     def __init__(
         self,
@@ -95,6 +92,7 @@ class EbkArticleORM(Base):
         top_ad,
         highlight_ad,
         link,
+        crawl_timestamp,
     ):
         self.name = name
         self.price = price
@@ -113,13 +111,11 @@ class EbkArticleORM(Base):
         self.top_ad = top_ad
         self.highlight_ad = highlight_ad
         self.link = link
+        self.crawl_timestamp = crawl_timestamp
 
     @classmethod
     def from_item(cls, item: EbkArticle):
         return cls(**asdict(item))
-
-
-# TODO differnt between Catefory and Categroy Record
 
 
 class CategoryORM(Base):
@@ -140,34 +136,3 @@ class CategoryORM(Base):
     @classmethod
     def from_item(cls, item):
         return cls(**asdict(item))
-
-
-class CategoryCrawl(Base):
-    __tablename__ = "crawlings"
-
-    id = sa.Column(sa.Integer, primary_key=True)
-    timestamp = sa.Column(sa.Integer)
-    duration = sa.Column(sa.Integer)
-    name = sa.Column(sa.String)
-    is_business = sa.Column(sa.Boolean)
-    n_pages = sa.Column(sa.Integer)
-    n_articles = sa.Column(sa.Integer)
-    abortion_reason = sa.Column(sa.String)
-
-    def __init__(
-        self,
-        timestamp,
-        duration,
-        name,
-        is_business,
-        n_pages,
-        n_articles,
-        abortion_reason,
-    ):
-        self.timestamp = timestamp
-        self.name = name
-        self.duration = duration
-        self.n_pages = n_pages
-        self.is_business = is_business
-        self.n_articles = n_articles
-        self.abortion_reason = abortion_reason
