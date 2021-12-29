@@ -38,19 +38,14 @@ class ScrapingStats:
     def add_abortion_reaseon(self, name, business, reason):
         self._data[(name, business)]["abortion_reason"] = reason
 
-    def save_to_csv(self, csv_path, additional_columns=None):
+    def as_list_of_dicts(self, additional_columns=None):
         if additional_columns is None:
             additional_columns = {}
         rows = [
             additional_columns | {"category": c, "are_business_ads": b} | d
             for (c, b), d in self._data.items()
         ]
-        file_exists = Path(csv_path).exists()
-        with open(csv_path, "a", newline="") as csvfile:
-            dict_writer = csv.DictWriter(csvfile, rows[0].keys())
-            if not file_exists:
-                dict_writer.writeheader()
-            dict_writer.writerows(rows)
+        return rows
 
     # def _set_start(self, name, business):
     #     self._data[(name, business)]["time"] = int(datetime.now().timestamp())
@@ -341,5 +336,17 @@ class SearchSpider(scrapy.Spider):
     def closed(self, reason):
         duration = int(datetime.now().timestamp()) - self.start_timestamp
         additional_columns = {"timestamp": self.start_timestamp, "duration": duration}
-        self.scraping_stats.save_to_csv(self.crawling_meta_path, additional_columns)
+        rows = self.scraping_stats.as_list_of_dicts(
+            self.crawling_meta_path, additional_columns
+        )
+
+        file_exists = Path(self.crawling_meta_path).exists()
+        with open(self.crawling_meta_path, "a", newline="") as csvfile:
+            dict_writer = csv.DictWriter(csvfile, rows[0].keys())
+            if not file_exists:
+                dict_writer.writeheader()
+            dict_writer.writerows(rows)
+
+        # TODO maybe save to database or extra database
+
         self.logger.info(f"\n{self.scraping_stats}")
