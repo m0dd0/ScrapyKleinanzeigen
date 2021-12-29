@@ -1,5 +1,8 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import List
+
+import sqlalchemy as sa
+import sqlalchemy.orm as orm
 
 # DESIGN DESCISSION:
 # we will use only dataclass as item type
@@ -40,3 +43,97 @@ class Category:
     name: int = field(default=None)
     n_articles: int = field(default=None)
     parent: str = field(default=None)
+
+
+### ORM MAPPERS
+
+Base = orm.declarative_base()
+
+
+class EbkArticleORM(Base):
+    __tablename__ = "articles"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String)
+    price = sa.Column(sa.Integer)
+    negotiable = sa.Column(sa.Boolean)
+    postal_code = sa.Column(sa.String)
+    timestamp = sa.Column(sa.Integer)
+    description = sa.Column(sa.String)
+    sendable = sa.Column(sa.Boolean)
+    offer = sa.Column(sa.Boolean)
+    tags = sa.Column(sa.String)  # TODO maybe use mapping/normalization if needed
+    main_category = sa.Column(sa.String)
+    sub_category = sa.Column(sa.String)
+    business_ad = sa.Column(sa.Boolean)
+    image_link = sa.Column(sa.String)
+    pro_shop_link = sa.Column(sa.String)
+    top_ad = sa.Column(sa.Boolean)
+    highlight_ad = sa.Column(sa.Boolean)
+
+    def __init__(
+        self,
+        name,
+        price,
+        negotiable,
+        postal_code,
+        timestamp,
+        description,
+        sendable,
+        offer,
+        tags,
+        main_category,
+        sub_category,
+        business_ad,
+        image_link,
+        pro_shop_link,
+        top_ad,
+        highlight_ad,
+    ):
+        self.name = name
+        self.price = price
+        self.negotiable = negotiable
+        self.postal_code = postal_code
+        self.timestamp = timestamp
+        self.description = description
+        self.sendable = sendable
+        self.offer = offer
+        self.tags = str(tags)
+        self.main_category = main_category
+        self.sub_category = sub_category
+        self.business_ad = business_ad
+        self.image_link = image_link
+        self.pro_shop_link = pro_shop_link
+        self.top_ad = top_ad
+        self.highlight_ad = highlight_ad
+
+    @classmethod
+    def from_item(cls, item: EbkArticle):
+        return cls(**asdict(item))
+
+
+class CategoryORM(Base):
+    __tablename__ = "categories"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    timestamp = sa.Column(sa.Integer)
+    name = sa.Column(sa.Integer)
+    n_articles = sa.Column(sa.Integer)
+    parent = sa.Column(sa.String)
+
+    def __init__(self, timestamp, name, n_articles, parent):
+        self.timestamp = timestamp
+        self.name = name
+        self.n_articles = n_articles
+        self.parent = str(parent)
+
+    @classmethod
+    def from_item(cls, item):
+        return cls(**asdict(item))
+        # instances = []
+        # for p in item.parent:
+        #     d = asdict(item)
+        #     d["parent"] = p
+        #     instances.append(cls(**d))
+
+        # return instances

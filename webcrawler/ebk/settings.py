@@ -46,7 +46,7 @@ COOKIES_ENABLED = True
 # }
 
 ITEM_PIPELINES = {
-    "ebk.pipelines.DatabaseWriterPipeline": 300,
+    "ebk.pipelines.DatabaseWriterPipe": 400,
 }
 
 # even if it seems that the crawler always waits for every until an item is processed
@@ -55,6 +55,9 @@ ITEM_PIPELINES = {
 # we have enough time to set the according flag to inform the spider that
 # no next article page requests shall be yielded
 CONCURRENT_ITEMS = 10
+
+DATABASE_URL = f"sqlite:///{Path(__file__).parent.parent.parent / 'data' / 'test.db'}"
+DATABASE_COMMIT_DELTA = 100
 
 LOGSTATS_INTERVAL = 10
 
