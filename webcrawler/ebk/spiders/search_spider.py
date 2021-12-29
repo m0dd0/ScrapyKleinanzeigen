@@ -81,16 +81,65 @@ class SearchSpider(scrapy.Spider):
 
         self.scraping_stats = ScrapingStats()
 
+        self._yielded_subcategory_names = []
+
         super().__init__(*args, **kwargs)
 
     def start_requests(self):
         start_url = "https://www.ebay-kleinanzeigen.de/s-katalog-orte.html"
         yield scrapy.Request(url=start_url, callback=self.parse_category_catalog)
 
+    def _follow_sub_category(self, response, main_cat_item, sub_cat_item, sub_cat_link):
+        if self.categories_to_scrawl is not None:
+            if not (
+                sub_cat_item.name in self.categories_to_scrawl
+                or sub_cat_item.parent in self.categories_to_scrawl
+            ):
+                self.logger.info(f"Skipping category {sub_cat_item.name}.")
+                return []
+
+        if self._yielded_subcategory_names.count(sub_cat_item.name) > 1:
+            self.logger.info(
+                f"Skipping category ({sub_cat_item.parent}/{sub_cat_item.name}) to avoid duplicated scwaling of sub category."
+            )
+            return []
+
+        cb_kwargs = {
+            "main_category": main_cat_item.name,
+            "sub_category": sub_cat_item.name,
+        }
+        if not self.seperate_business_ads:
+            self.scraping_stats.add_category(sub_cat_item.name, None)
+            return [
+                response.follow(
+                    sub_cat_link,
+                    callback=self.parse_article_page,
+                    cb_kwargs=cb_kwargs | {"is_business_ad": None},
+                )
+            ]
+        else:
+            self.scraping_stats.add_category(sub_cat_item.name, True)
+            self.scraping_stats.add_category(sub_cat_item.name, False)
+            article_url_parts = response.urljoin(sub_cat_link).split("/")
+            article_url_parts.insert(-1, "anbieter:{gewerblich_privat}")
+            article_url_base = "/".join(article_url_parts)
+            return [
+                Request(
+                    article_url_base.format(gewerblich_privat="privat"),
+                    callback=self.parse_article_page,
+                    cb_kwargs=cb_kwargs | {"is_business_ad": False},
+                ),
+                Request(
+                    article_url_base.format(gewerblich_privat="gewerblich"),
+                    callback=self.parse_article_page,
+                    cb_kwargs=cb_kwargs | {"is_business_ad": True},
+                ),
+            ]
+
     def parse_category_catalog(self, response: HtmlResponse):
         current_timestamp = int(datetime.now().timestamp())
 
-        sub_categories = {}  # {name:(loader, link)}
+        self._yielded_subcategory_names = []
 
         for main_cat_li_ in response.css(".contentbox .l-container-row"):
             main_cat_h2_ = main_cat_li_.css(".treelist-headline")
@@ -110,52 +159,16 @@ class SearchSpider(scrapy.Spider):
                 sub_cat_loader.add_value("timestamp", current_timestamp)
                 sub_cat_loader.add_value("parent", main_cat_item.name)
 
-                # sub category can exist in multiple main categories
-                sub_cat_name = sub_cat_loader.get_output_value("name")
-                if sub_cat_name in sub_categories:
-                    sub_cat_loader, _ = sub_categories[sub_cat_name]
-                    sub_cat_loader.add_value("parent", main_cat_item.name)
-                else:
-                    sub_cat_link = sub_cat_li_.css("a::attr(href)").get()
-                    sub_categories[sub_cat_name] = (sub_cat_loader, sub_cat_link)
+                sub_cat_link = sub_cat_li_.css("a::attr(href)").get()
+                sub_cat_item = sub_cat_loader.load_item()
 
-        for sub_cat_loader, sub_cat_link in sub_categories.values():
-            sub_cat_item = sub_cat_loader.load_item()
+                yield sub_cat_item
+                self._yielded_subcategory_names.append(sub_cat_item.name)
 
-            yield sub_cat_item
-
-            if self.categories_to_scrawl is not None:
-                if sub_cat_item.name not in self.categories_to_scrawl:
-                    self.logger.info(f"Skipping category {sub_cat_item.name}.")
-                    continue
-
-            cb_kwargs = {
-                "main_category": main_cat_item.name,
-                "sub_category": sub_cat_item.name,
-            }
-            if not self.seperate_business_ads:
-                self.scraping_stats.add_category(sub_cat_item.name, None)
-                yield response.follow(
-                    sub_cat_link,
-                    callback=self.parse_article_page,
-                    cb_kwargs=cb_kwargs | {"is_business_ad": None},
-                )
-            else:
-                self.scraping_stats.add_category(sub_cat_item.name, True)
-                self.scraping_stats.add_category(sub_cat_item.name, False)
-                article_url_parts = response.urljoin(sub_cat_link).split("/")
-                article_url_parts.insert(-1, "anbieter:{gewerblich_privat}")
-                article_url_base = "/".join(article_url_parts)
-                yield Request(
-                    article_url_base.format(gewerblich_privat="privat"),
-                    callback=self.parse_article_page,
-                    cb_kwargs=cb_kwargs | {"is_business_ad": False},
-                )
-                yield Request(
-                    article_url_base.format(gewerblich_privat="gewerblich"),
-                    callback=self.parse_article_page,
-                    cb_kwargs=cb_kwargs | {"is_business_ad": True},
-                )
+                for req in self._follow_sub_category(
+                    response, main_cat_item, sub_cat_item, sub_cat_link
+                ):
+                    yield req
 
     def _get_abortion_message_base(self, sub_category: str, is_business_ad: bool):
         business_type_mapping = {None: "all", True: "gewerblich", False: "privat"}
