@@ -63,8 +63,8 @@ class EbkArticleORM(Base):
     sendable = sa.Column(sa.Boolean)
     offer = sa.Column(sa.Boolean)
     tags = sa.Column(sa.String)  # TODO maybe use mapping/normalization if needed
-    main_category = sa.Column(sa.String)
-    sub_category = sa.Column(sa.String)
+    main_category = sa.Column(sa.String)  # TODO relationship
+    sub_category = sa.Column(sa.String)  # TODO relationship
     is_business_ad = sa.Column(sa.Boolean)
     image_link = sa.Column(sa.String)
     pro_shop_link = sa.Column(sa.String)
@@ -112,6 +112,9 @@ class EbkArticleORM(Base):
         return cls(**asdict(item))
 
 
+# TODO differnt between Catefory and Categroy Record
+
+
 class CategoryORM(Base):
     __tablename__ = "categories"
 
@@ -119,21 +122,14 @@ class CategoryORM(Base):
     timestamp = sa.Column(sa.Integer)
     name = sa.Column(sa.Integer)
     n_articles = sa.Column(sa.Integer)
-    parent = sa.Column(sa.String)
+    parent = sa.Column(sa.String)  # TODO relationship
 
     def __init__(self, timestamp, name, n_articles, parent):
         self.timestamp = timestamp
         self.name = name
         self.n_articles = n_articles
-        self.parent = str(parent)
+        self.parent = parent
 
     @classmethod
     def from_item(cls, item):
         return cls(**asdict(item))
-        # instances = []
-        # for p in item.parent:
-        #     d = asdict(item)
-        #     d["parent"] = p
-        #     instances.append(cls(**d))
-
-        # return instances

@@ -58,7 +58,7 @@ class CategoryLoader(ItemLoader):
     timestamp_out = TakeFirst()
     name_out = Compose(lambda v: v[0], str.strip)
     n_articles_out = Compose(lambda v: v[0], _integer_from_string)
-    parent_out = Identity()
+    parent_out = TakeFirst()
 
 
 class ArticleLoader(ItemLoader):

@@ -100,7 +100,7 @@ class SearchSpider(scrapy.Spider):
 
         if self._yielded_subcategory_names.count(sub_cat_item.name) > 1:
             self.logger.info(
-                f"Skipping category ({sub_cat_item.parent}/{sub_cat_item.name}) to avoid duplicated scwaling of sub category."
+                f"Skipping category ({sub_cat_item.parent}/{sub_cat_item.name}) to avoid duplicated scrawling of sub category."
             )
             return []
 
