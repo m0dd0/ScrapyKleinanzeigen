@@ -10,14 +10,14 @@ NEWSPIDER_MODULE = "ebk.spiders"
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
+# USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
 # USER_AGENT = "scrapy ebk by mo"
-# USER_AGENT = "not the Googlebot"
-# USER_AGENT = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+# USER_AGENT = "not the Goolgebot"
+USER_AGENT = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
 
 ROBOTSTXT_OBEY = True
 
-DOWNLOAD_DELAY = 3
+DOWNLOAD_DELAY = 0.1
 # The download delay setting will honor only one of:
 # CONCURRENT_REQUESTS_PER_DOMAIN = 16
 # CONCURRENT_REQUESTS_PER_IP = 16
@@ -56,7 +56,7 @@ ITEM_PIPELINES = {
 # no next article page requests shall be yielded
 CONCURRENT_ITEMS = 10
 
-DATABASE_URL = f"sqlite:///{Path(__file__).parent.parent.parent / 'data' / 'test.db'}"
+DATABASE_URL = f"sqlite:///{Path(__file__).parent.parent.parent / 'data' / 'test2.db'}"
 DATABASE_COMMIT_DELTA = 100
 
 LOGSTATS_INTERVAL = 10

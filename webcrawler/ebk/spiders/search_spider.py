@@ -18,7 +18,7 @@ class ScrapingStats:
         self._data[(name, business)] = {
             "pages": 0,
             "articles": 0,
-            "duplicates": 0,
+            # "duplicates": 0,
         }
 
     def increment_counter(self, name, business, counter):
@@ -29,9 +29,6 @@ class ScrapingStats:
 
     def get_category(self, name, business):
         return self._data[(name, business)]
-
-    def category_exists(self, name, business):
-        return bool(self._data.get((name, business)))
 
     def add_abortion_reaseon(self, name, business, reason):
         self._data[(name, business)]["abortion_reason"] = reason
@@ -56,7 +53,7 @@ class SearchSpider(scrapy.Spider):
         self,
         max_pages_per_category=3,
         max_articles_per_category=100,
-        max_duplicates_per_category=2,
+        # max_duplicates_per_category=2,
         max_article_age=60 * 60 * 24,
         categories_to_scrawl=None,
         seperate_business_ads=True,
@@ -65,7 +62,7 @@ class SearchSpider(scrapy.Spider):
     ):
         self.max_pages_per_category = int(max_pages_per_category)
         self.max_articles_per_category = int(max_articles_per_category)
-        self.max_duplicates_per_category = int(max_duplicates_per_category)
+        # self.max_duplicates_per_category = int(max_duplicates_per_category)
         self.max_article_age = int(max_article_age)  # in seconds
         self.categories_to_scrawl = categories_to_scrawl
         if self.categories_to_scrawl is not None:
@@ -220,14 +217,14 @@ class SearchSpider(scrapy.Spider):
             )
             return True
 
-        if stats["duplicates"] > self.max_duplicates_per_category:
-            self.logger.info(
-                f"{abortion_message} number of duplicates ({self.max_duplicates_per_category})."
-            )
-            self.scraping_stats.add_abortion_reaseon(
-                sub_category, is_business_ad, "duplicates"
-            )
-            return True
+        # if stats["duplicates"] > self.max_duplicates_per_category:
+        #     self.logger.info(
+        #         f"{abortion_message} number of duplicates ({self.max_duplicates_per_category})."
+        #     )
+        #     self.scraping_stats.add_abortion_reaseon(
+        #         sub_category, is_business_ad, "duplicates"
+        #     )
+        #     return True
 
         return False
 
@@ -263,6 +260,7 @@ class SearchSpider(scrapy.Spider):
             )
             middle_subloader.add_css("price", ".aditem-main--middle--price::text")
             middle_subloader.add_css("negotiable", ".aditem-main--middle--price::text")
+            middle_subloader.add_css("link", "h2 a::attr(href)")
 
             bottom_subloader = article_loader.nested_css(".aditem-main--bottom")
             bottom_subloader.add_css("tags", ".text-module-end.simpletag::text")

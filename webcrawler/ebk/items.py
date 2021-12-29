@@ -35,6 +35,7 @@ class EbkArticle:
     pro_shop_link: str = field(default=None)
     top_ad: bool = field(default=None)
     highlight_ad: bool = field(default=None)
+    link: str = field(default=None)
 
 
 @dataclass
@@ -70,6 +71,7 @@ class EbkArticleORM(Base):
     pro_shop_link = sa.Column(sa.String)
     top_ad = sa.Column(sa.Boolean)
     highlight_ad = sa.Column(sa.Boolean)
+    link = sa.Column(sa.String)
 
     def __init__(
         self,
@@ -89,6 +91,7 @@ class EbkArticleORM(Base):
         pro_shop_link,
         top_ad,
         highlight_ad,
+        link,
     ):
         self.name = name
         self.price = price
@@ -106,6 +109,7 @@ class EbkArticleORM(Base):
         self.pro_shop_link = pro_shop_link
         self.top_ad = top_ad
         self.highlight_ad = highlight_ad
+        self.link = link
 
     @classmethod
     def from_item(cls, item: EbkArticle):

@@ -88,6 +88,11 @@ class ArticleLoader(ItemLoader):
     sub_category_out = TakeFirst()
     is_business_ad_out = TakeFirst()
     image_link_out = TakeFirst()
-    pro_shop_link_out = Compose(_save_first)
+    pro_shop_link_out = Compose(
+        _save_first, lambda v: f"https://www.ebay-kleinanzeigen.de{v}"
+    )
     top_ad_out = Compose(bool)
     highlight_ad_out = Compose(bool)
+    link_out = Compose(
+        lambda v: v[0], lambda v: f"https://www.ebay-kleinanzeigen.de{v}"
+    )
