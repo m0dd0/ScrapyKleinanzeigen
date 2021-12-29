@@ -59,14 +59,18 @@ class SearchSpider(scrapy.Spider):
         *args,
         **kwargs,
     ):
+        if max_pages is not None:
+            max_pages = int(max_pages)
+        self.max_pages = max_pages
+        if max_articles is not None:
+            max_articles = int(max_articles)
+        self.max_articles = max_articles
         if max_age is not None:
-            self.max_pages = int(max_pages)
-        if max_articles is None:
-            self.max_articles = int(max_articles)
-        if max_age is not None:
-            self.max_age = int(max_age)  # in seconds
+            max_age = int(max_age)  # in seconds
+        self.max_age = max_age
         if categories is not None:
-            self.categories = categories.split(",")
+            categories = categories.split(",")
+        self.categories = categories
 
         self.seperate_business_ads = seperate_business_ads in (
             True,
@@ -283,8 +287,12 @@ class SearchSpider(scrapy.Spider):
         if self._check_abortion_page(articles_, sub_category, is_business_ad):
             return
 
-        req = response.follow(
-            response.css(".pagination-next::attr(href)").get(),
+        nex_page_url = response.css(".pagination-next::attr(href)").get()
+        if nex_page_url is None:
+            return
+
+        yield response.follow(
+            nex_page_url,
             callback=self.parse_article_page,
             cb_kwargs={
                 "main_category": main_category,
@@ -292,7 +300,6 @@ class SearchSpider(scrapy.Spider):
                 "is_business_ad": is_business_ad,
             },
         )
-        yield req
 
     def closed(self, reason):
         self.logger.info(f"\n{self.scraping_stats}")

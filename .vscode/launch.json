@@ -14,7 +14,11 @@
         "search_spider",
         "--loglevel=DEBUG",
         "-a",
-        "categories_to_scrawl=Autos"
+        "categories=Reptilien",
+        "-a",
+        "max_age=900",
+        "-a",
+        "seperate_business_ads=False"
       ],
       "cwd": "${workspaceFolder}/webcrawler",
       "console": "integratedTerminal",
