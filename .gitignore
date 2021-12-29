@@ -1,0 +1,9 @@
+data/*
+*.pyc
+*/*/log/*
+venv
+__pycache__
+test.json
+
+.vscode/*
+!.vscode/launch.json

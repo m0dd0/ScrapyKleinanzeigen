@@ -1,0 +1,1 @@
+iex "scrapy crawl search_spider --loglevel=INFO -O ../data/last_run.json -a max_pages=1 -a max_articles=100 -a max_article_age=300"
