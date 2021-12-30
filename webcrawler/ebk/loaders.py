@@ -80,6 +80,7 @@ class ArticleLoader(ItemLoader):
         lambda v: "versand möglich" not in v,
     )
     offer_out = Compose(lambda v: [t.lower() for t in v], lambda v: "gesuch" not in v)
+    # FIXME
     tags_out = MapCompose(
         str.lower,
         lambda v: {True: None, False: v}[v in ("gesuch", "versand möglich")],

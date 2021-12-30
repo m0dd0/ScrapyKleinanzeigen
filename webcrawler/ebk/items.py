@@ -140,3 +140,34 @@ class CategoryORM(Base):
     @classmethod
     def from_item(cls, item):
         return cls(**asdict(item))
+
+
+class CategoryCrawlORM(Base):
+    __tablename__ = "stats"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    start_timestamp = sa.Column(sa.Integer)
+    duration = sa.Column(sa.Integer)
+    sub_category = sa.Column(sa.String)
+    is_business_ad = sa.Column(sa.Boolean)
+    n_articles = sa.Column(sa.Integer)
+    n_pages = sa.Column(sa.Integer)
+    abortion_reason = sa.Column(sa.String)
+
+    def __init__(
+        self,
+        start_timestamp,
+        duration,
+        sub_category,
+        is_business_ad,
+        n_articles,
+        n_pages,
+        abortion_reason,
+    ):
+        self.start_timestamp = start_timestamp
+        self.duration = duration
+        self.sub_category = sub_category
+        self.is_business_ad = is_business_ad
+        self.n_articles = n_articles
+        self.n_pages = n_pages
+        self.abortion_reason = abortion_reason

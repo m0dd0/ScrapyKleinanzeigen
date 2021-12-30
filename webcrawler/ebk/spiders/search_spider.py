@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 
 from ..loaders import ArticleLoader, CategoryLoader
-from ..items import Category, EbkArticle, Base
+from ..items import Category, CategoryCrawlORM, EbkArticle, Base
 
 
 class ScrapingStats:
@@ -43,7 +43,7 @@ class ScrapingStats:
         if additional_columns is None:
             additional_columns = {}
         rows = [
-            additional_columns | {"category": c, "are_business_ads": b} | d
+            additional_columns | {"sub_category": c, "is_business_ad": b} | d
             for (c, b), d in self._data.items()
         ]
         return rows
@@ -317,9 +317,9 @@ class SearchSpider(scrapy.Spider):
             middle_subloader.add_css("link", "h2 a::attr(href)")
 
             bottom_subloader = article_loader.nested_css(".aditem-main--bottom")
-            bottom_subloader.add_css("tags", ".text-module-end.simpletag::text")
-            bottom_subloader.add_css("offer", ".text-module-end.simpletag::text")
-            bottom_subloader.add_css("sendable", ".text-module-end.simpletag::text")
+            bottom_subloader.add_css("tags", ".text-module-end .simpletag::text")
+            bottom_subloader.add_css("offer", ".text-module-end .simpletag::text")
+            bottom_subloader.add_css("sendable", ".text-module-end .simpletag::text")
             bottom_subloader.add_css(
                 "pro_shop_link", ".text-module-oneline a::attr(href)"
             )
@@ -352,16 +352,58 @@ class SearchSpider(scrapy.Spider):
 
     def closed(self, reason):
         duration = int(datetime.now().timestamp()) - self.start_timestamp
-        additional_columns = {"timestamp": self.start_timestamp, "duration": duration}
+        additional_columns = {
+            "start_timestamp": self.start_timestamp,
+            "duration": duration,
+        }
         rows = self.scraping_stats.as_list_of_dicts(additional_columns)
+
+        total_articles = sum([r["articles"] for r in rows])
+        total_pages = sum([r["pages"] for r in rows])
 
         file_exists = Path(self.crawling_meta_path).exists()
         with open(self.crawling_meta_path, "a", newline="") as csvfile:
-            dict_writer = csv.DictWriter(csvfile, rows[0].keys())
+            writer = csv.writer(csvfile)
             if not file_exists:
-                dict_writer.writeheader()
-            dict_writer.writerows(rows)
+                writer.writerow(
+                    [
+                        "start_timestamp",
+                        "duration",
+                        "n_categories",
+                        "total_pages",
+                        "total_articles",
+                        "pages_per_second",
+                        "articles_per_second",
+                        "max_pages",
+                        "max_article",
+                        "max_age",
+                        "categories",
+                        "seperate_business_ads",
+                        "max_runtime",
+                    ]
+                )
+            writer.writerow(
+                [
+                    self.start_timestamp,
+                    duration,
+                    len(rows),
+                    total_pages,
+                    total_articles,
+                    total_pages / duration,
+                    total_articles / duration,
+                    self.max_pages,
+                    self.max_articles,
+                    self.max_age,
+                    self.categories,
+                    self.seperate_business_ads,
+                    self.max_runtime,
+                ]
+            )
 
-        # TODO maybe save to database or extra database
+        for r in rows:
+            r["n_pages"] = r.pop("pages")
+            r["n_articles"] = r.pop("articles")
+            self.session.add(CategoryCrawlORM(**r))
 
+        self.session.commit()
         self.logger.info(f"\n{self.scraping_stats}")
