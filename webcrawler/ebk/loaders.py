@@ -1,9 +1,5 @@
 import re
 from datetime import datetime, timedelta
-from typing import List
-
-from itemloaders import ItemLoader
-from itemloaders.processors import MapCompose, TakeFirst, Compose, Identity
 
 
 def _integer_from_string(string: str):
@@ -47,54 +43,81 @@ def _get_article_datetime(datestring: str):
         return datetime.strptime(datestring, "%d.%m.%Y")
 
 
-def _save_first(l: List):
-    if len(l) == 0:
-        return None
-    else:
-        return l[0]
+# class Compose:
+#     def __init__(self, *functions) -> None:
+#         self.functions = functions
+
+#     def __call__(self, value):
+#         for f in self.functions:
+#             value = f(value)
+#             if value is None:
+#                 break
+#         return value
 
 
-class CategoryLoader(ItemLoader):
-    timestamp_out = TakeFirst()
-    name_out = Compose(lambda v: v[0], str.strip)
-    n_articles_out = Compose(lambda v: v[0], _integer_from_string)
-    parent_out = TakeFirst()
+class MyItemLoader:
+    def __init__(self) -> None:
+        pass
+
+    def load_item(self):
+        return self._data
 
 
-class ArticleLoader(ItemLoader):
-    name_out = TakeFirst()
-    price_out = Compose(
-        _save_first,
-        str.lower,
-        lambda v: {True: "0", False: v}["zu verschenken" in v],
-        _integer_from_string,
-    )
-    negotiable_out = Compose(_save_first, str.lower, lambda v: "vb" in v)
-    postal_code_out = Compose(lambda v: re.sub("\D", "", v[-1]))
-    timestamp_out = Compose(
-        lambda v: v[-1], _get_article_datetime, lambda v: int(v.timestamp())
-    )
-    description_out = Compose(lambda v: v[0], lambda v: v.removesuffix("..."))
-    sendable_out = Compose(
-        lambda v: [t.lower() for t in v],
-        lambda v: "versand möglich" not in v,
-    )
-    offer_out = Compose(lambda v: [t.lower() for t in v], lambda v: "gesuch" not in v)
-    # FIXME
-    tags_out = MapCompose(
-        str.lower,
-        lambda v: {True: None, False: v}[v in ("gesuch", "versand möglich")],
-    )
-    main_category_out = TakeFirst()
-    sub_category_out = TakeFirst()
-    is_business_ad_out = TakeFirst()
-    image_link_out = TakeFirst()
-    pro_shop_link_out = Compose(
-        _save_first, lambda v: f"https://www.ebay-kleinanzeigen.de{v}"
-    )
-    top_ad_out = Compose(bool)
-    highlight_ad_out = Compose(bool)
-    link_out = Compose(
-        lambda v: v[0], lambda v: f"https://www.ebay-kleinanzeigen.de{v}"
-    )
-    crawl_timestamp_out = TakeFirst()
+class CategoryLoader(MyItemLoader):
+    def __init__(self, timestamp, name, n_articles, parent) -> None:
+        self._data = {
+            "timestamp": timestamp,
+            "name": name.strip(),
+            "n_articles": _integer_from_string(n_articles),
+            "parent": parent,
+        }
+
+
+class ArticleLoader(MyItemLoader):
+    def __init__(
+        self,
+        name,
+        price_string,
+        postal_code,
+        timestamp,
+        description,
+        tags,
+        main_category,
+        sub_category,
+        is_business_ad,
+        image_link,
+        pro_shop_link,
+        top_ad,
+        highlight_ad,
+        link,
+        crawl_timestamp,
+    ):
+        tags = [t.lower() for t in tags]
+        self._dict = {
+            "name": name,
+            "price": 0
+            if "zu verschenken" in price_string.lower()
+            else _integer_from_string(price_string)
+            if price_string
+            else None,
+            "negotiable": "vb" in price_string.lower() if price_string else False,
+            "postal_code": re.sub("\D", "", postal_code[-1]),
+            "timestamp": int(_get_article_datetime(timestamp).timestamp()),
+            "description": description[0].removesuffix("..."),
+            "sendable": "versand möglich" not in tags,
+            "offer": "gesuch" not in tags,
+            "tags": tags,
+            "main_category": main_category,
+            "sub_category": sub_category,
+            "is_business_ad": is_business_ad,
+            "image_link": f"https://www.ebay-kleinanzeigen.de{image_link}"
+            if image_link
+            else None,
+            "pro_shop_link": f"https://www.ebay-kleinanzeigen.de{pro_shop_link}"
+            if pro_shop_link
+            else None,
+            "top_ad": False if top_ad is None else True,
+            "highlight_ad": False if highlight_ad is None else True,
+            "link": f"https://www.ebay-kleinanzeigen.de{link}",
+            "crawl_timestamp": crawl_timestamp,
+        }

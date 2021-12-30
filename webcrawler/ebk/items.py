@@ -28,134 +28,26 @@ import scrapy
 # TODO speed comparison to scrapy.item (no need for asdict)
 
 
-# @dataclass
-# class EbkArticle:
-#     name: str = field(default=None)
-#     price: int = field(default=None)
-#     negotiable: bool = field(default=None)
-#     postal_code: str = field(default=None)
-#     timestamp: int = field(default=None)
-#     description: str = field(default=None)
-#     sendable: str = field(default=None)
-#     offer: bool = field(default=None)
-#     tags: List[str] = field(default=None)
-#     main_category: str = field(default=None)
-#     sub_category: str = field(default=None)
-#     is_business_ad: bool = field(default=None)
-#     image_link: str = field(default=None)
-#     pro_shop_link: str = field(default=None)
-#     top_ad: bool = field(default=None)
-#     highlight_ad: bool = field(default=None)
-#     link: str = field(default=None)
-#     crawl_timestamp: int = field(default=None)
-
-
-def _integer_from_string(string: str):
-    res = re.sub("\D", "", string)
-    if res == "":
-        return None
-    if len(res) > 1:
-        res = res.removeprefix("0")
-    return int(res)
-
-
-def _get_article_datetime(datestring: str):
-    datestring = datestring.lower().strip()
-
-    # in case the article is a topad only empty string are contained in the topright div
-    # also sometimes two strings are in the div from ahich one is only a "\n"
-    # in this case abort further parsing by returning None
-    if datestring == "":
-        return None
-
-    if re.match("gestern|heute.*", datestring):
-        yesterday = datestring.startswith("gestern")
-        hour, minute = divmod(_integer_from_string(datestring), 100)
-
-        current_datetime = datetime.now()
-        article_datetime = datetime(
-            current_datetime.year,
-            current_datetime.month,
-            current_datetime.day,
-            hour,
-            minute,
-            0,
-            0,
-        )
-        if yesterday:
-            article_datetime = article_datetime - timedelta(days=1)
-
-        return article_datetime
-
-    else:
-        return datetime.strptime(datestring, "%d.%m.%Y")
-
-
-def _save_first(l: List):
-    if len(l) == 0:
-        return None
-    else:
-        return l[0]
-
-
-class EbkArticle(scrapy.Item):
-    name = scrapy.Field(output_processpr=TakeFirst())
-    price = scrapy.Field(
-        output_processor=Compose(
-            _save_first,
-            str.lower,
-            lambda v: {True: "0", False: v}["zu verschenken" in v],
-            _integer_from_string,
-        )
-    )
-    negotiable = scrapy.Field(
-        output_processor=Compose(_save_first, str.lower, lambda v: "vb" in v)
-    )
-    postal_code = scrapy.Field(
-        output_processor=Compose(lambda v: re.sub("\D", "", v[-1]))
-    )
-    timestamp = scrapy.Field(
-        output_processor=Compose(
-            lambda v: v[-1], _get_article_datetime, lambda v: int(v.timestamp())
-        )
-    )
-    description = scrapy.Field(
-        output_processor=Compose(lambda v: v[0], lambda v: v.removesuffix("..."))
-    )
-    sendable = scrapy.Field(
-        output_processor=Compose(
-            lambda v: [t.lower() for t in v],
-            lambda v: "versand möglich" not in v,
-        )
-    )
-    offer = scrapy.Field(
-        output_processor=Compose(
-            lambda v: [t.lower() for t in v], lambda v: "gesuch" not in v
-        )
-    )
-    tags = scrapy.Field(
-        output_processor=MapCompose(
-            str.lower,
-            lambda v: {True: None, False: v}[v in ("gesuch", "versand möglich")],
-        )
-    )
-    main_category = scrapy.Field(output_processor=TakeFirst())
-    sub_category = scrapy.Field(output_processor=TakeFirst())
-    is_business_ad = scrapy.Field(output_processor=TakeFirst())
-    image_link = scrapy.Field(output_processor=TakeFirst())
-    pro_shop_link = scrapy.Field(
-        output_processor=Compose(
-            _save_first, lambda v: f"https://www.ebay-kleinanzeigen.de{v}"
-        )
-    )
-    top_ad = scrapy.Field(output_processor=Compose(bool))
-    highlight_ad = scrapy.Field(output_processor=Compose(bool))
-    link = scrapy.Field(
-        output_processor=Compose(
-            lambda v: v[0], lambda v: f"https://www.ebay-kleinanzeigen.de{v}"
-        )
-    )
-    crawl_timestamp = scrapy.Field(output_processor=TakeFirst())
+@dataclass
+class EbkArticle:
+    name: str = field(default=None)
+    price: int = field(default=None)
+    negotiable: bool = field(default=None)
+    postal_code: str = field(default=None)
+    timestamp: int = field(default=None)
+    description: str = field(default=None)
+    sendable: str = field(default=None)
+    offer: bool = field(default=None)
+    tags: List[str] = field(default=None)
+    main_category: str = field(default=None)
+    sub_category: str = field(default=None)
+    is_business_ad: bool = field(default=None)
+    image_link: str = field(default=None)
+    pro_shop_link: str = field(default=None)
+    top_ad: bool = field(default=None)
+    highlight_ad: bool = field(default=None)
+    link: str = field(default=None)
+    crawl_timestamp: int = field(default=None)
 
 
 @dataclass
