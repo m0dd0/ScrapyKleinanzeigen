@@ -292,45 +292,39 @@ class SearchSpider(scrapy.Spider):
 
         articles_ = response.css(".aditem")
         for article_ in articles_:
-            # article_loader = ArticleLoader(EbkArticle(), article_)
-            # article_loader.add_value("main_category", main_category)
-            # article_loader.add_value("sub_category", sub_category)
-            # article_loader.add_value("is_business_ad", is_business_ad)
-            # article_loader.add_value("crawl_timestamp", self.start_timestamp)
-            article_loader = article_
-            topleft_subloader = article_loader.css(".aditem-main--top--left")[0]
-            topright_subloader = article_loader.css(".aditem-main--top--right")[0]
-            middle_subloader = article_loader.css(".aditem-main--middle")[0]
-            bottom_subloader = article_loader.css(".aditem-main--bottom")[0]
-            article_item = EbkArticle(
-                main_category=main_category,
-                sub_category=sub_category,
-                is_business_ad=is_business_ad,
-                crawl_timestamp=self.start_timestamp,
-                image_link=article_loader.css(".aditem-image img::attr(src)").get(),
-                postal_code=topleft_subloader.css("::text").get(),
-                top_ad=topright_subloader.css(".icon-feature-topad").get(),
-                highlight_ad=topright_subloader.css(".icon-feature-highlight").get(),
-                timestamp=topright_subloader.css("::text").get(),
-                name=middle_subloader.css("h2 a::text").get(),
-                description=middle_subloader.css(
-                    ".aditem-main--middle--description::text"
-                ).get(),
-                price=middle_subloader.css(".aditem-main--middle--price::text").get(),
-                negotiable=middle_subloader.css(
-                    ".aditem-main--middle--price::text"
-                ).get(),
-                link=middle_subloader.css("h2 a::attr(href)").get(),
-                tags=bottom_subloader.css(".text-module-end .simpletag::text").get(),
-                offer=bottom_subloader.css(".text-module-end .simpletag::text").get(),
-                sendable=bottom_subloader.css(
-                    ".text-module-end .simpletag::text"
-                ).get(),
-                pro_shop_link=bottom_subloader.css(
-                    ".text-module-oneline a::attr(href)"
-                ).get(),
+            article_loader = ArticleLoader(EbkArticle(), article_)
+            article_loader.add_value("main_category", main_category)
+            article_loader.add_value("sub_category", sub_category)
+            article_loader.add_value("is_business_ad", is_business_ad)
+            article_loader.add_value("crawl_timestamp", self.start_timestamp)
+            article_loader.add_css("image_link", ".aditem-image img::attr(src)")
+
+            topleft_subloader = article_loader.nested_css(".aditem-main--top--left")
+            topleft_subloader.add_css("postal_code", "::text")
+
+            topright_subloader = article_loader.nested_css(".aditem-main--top--right")
+            topright_subloader.add_css("top_ad", ".icon-feature-topad")
+            topright_subloader.add_css("highlight_ad", ".icon-feature-highlight")
+            topright_subloader.add_css("timestamp", "::text")
+
+            middle_subloader = article_loader.nested_css(".aditem-main--middle")
+            middle_subloader.add_css("name", "h2 a::text")
+            middle_subloader.add_css(
+                "description", ".aditem-main--middle--description::text"
             )
-            # article_item = {}  # article_loader.load_item()
+            middle_subloader.add_css("price", ".aditem-main--middle--price::text")
+            middle_subloader.add_css("negotiable", ".aditem-main--middle--price::text")
+            middle_subloader.add_css("link", "h2 a::attr(href)")
+
+            bottom_subloader = article_loader.nested_css(".aditem-main--bottom")
+            bottom_subloader.add_css("tags", ".text-module-end .simpletag::text")
+            bottom_subloader.add_css("offer", ".text-module-end .simpletag::text")
+            bottom_subloader.add_css("sendable", ".text-module-end .simpletag::text")
+            bottom_subloader.add_css(
+                "pro_shop_link", ".text-module-oneline a::attr(href)"
+            )
+
+            article_item = article_loader.load_item()
             self.scraping_stats.increment_counter(
                 sub_category, is_business_ad, "articles"
             )
