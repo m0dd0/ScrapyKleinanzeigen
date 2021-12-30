@@ -302,16 +302,16 @@ class SearchSpider(scrapy.Spider):
                 image_link=article_.css(".aditem-image img::attr(src)").get(),
                 postal_code=article_topleft_.css("::text")[-1].get(),
                 top_ad=article_topright_.css(".icon-feature-topad").get(),
-                highlight=article_topright_.css(".icon-feature-highlight").get(),
+                highlight_ad=article_topright_.css(".icon-feature-highlight").get(),
                 timestamp=article_topright_.css("::text").get(),
-                name=article_middle_.css("name", "h2 a::text").get(),
+                name=article_middle_.css("h2 a::text").get(),
                 description=article_middle_.css(
                     ".aditem-main--middle--description::text"
                 ).get(),
                 price_string=article_middle_.css(
                     ".aditem-main--middle--price::text"
                 ).get(),
-                link=article_middle_.css("link", "h2 a::attr(href)").get(),
+                link=article_middle_.css("h2 a::attr(href)").get(),
                 tags=article_bottom_.css(".text-module-end .simpletag::text").getall(),
                 pro_shop_link=article_bottom_.css(
                     ".text-module-oneline a::attr(href)"

@@ -2,12 +2,14 @@ import re
 
 import sqlalchemy as sa
 from sqlalchemy import orm
-import scrapy
 
-from .parsing import integer_from_string, get_article_datetime
+from .parsing import eval_price_string, eval_timestamp_str, integer_from_string
 
 
-class EbkArticle(scrapy.Item):
+class EbkArticle(dict):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
     @classmethod
     def from_raw(
         cls,
@@ -29,14 +31,10 @@ class EbkArticle(scrapy.Item):
     ):
         return cls(
             name=name,
-            price=0
-            if "zu verschenken" in price_string.lower()
-            else integer_from_string(price_string)
-            if price_string
-            else None,
+            price=eval_price_string(price_string),
             negotiable="vb" in price_string.lower() if price_string else False,
             postal_code=re.sub("\D", "", postal_code[-1]),
-            timestamp=int(get_article_datetime(timestamp).timestamp()),
+            timestamp=eval_timestamp_str(timestamp),
             description=description[0].removesuffix("..."),
             sendable="versand möglich" not in tags,
             offer="gesuch" not in tags,
@@ -57,7 +55,10 @@ class EbkArticle(scrapy.Item):
         )
 
 
-class Category(scrapy.Item):
+class Category(dict):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
     @classmethod
     def from_raw(cls, timestamp, name, n_articles, parent):
         return cls(

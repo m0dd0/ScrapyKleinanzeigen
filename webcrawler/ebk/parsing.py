@@ -41,3 +41,18 @@ def get_article_datetime(datestring: str):
 
     else:
         return datetime.strptime(datestring, "%d.%m.%Y")
+
+
+def eval_timestamp_str(timestamp_str):
+    dt = get_article_datetime(timestamp_str)
+    if dt:
+        return int(dt.timestamp())
+    return None
+
+
+def eval_price_string(price_string):
+    if not price_string:
+        return None
+    if "zu verschenken" in price_string.lower():
+        return 0
+    return integer_from_string(price_string)
