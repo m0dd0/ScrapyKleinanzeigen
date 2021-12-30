@@ -131,24 +131,24 @@ class SearchSpider(scrapy.Spider):
     def _follow_sub_category(self, response, main_cat_item, sub_cat_item, sub_cat_link):
         if self.categories is not None:
             if not (
-                sub_cat_item.name in self.categories
-                or sub_cat_item.parent in self.categories
+                sub_cat_item["name"] in self.categories
+                or sub_cat_item["parent"] in self.categories
             ):
-                self.logger.info(f"Skipping category {sub_cat_item.name}.")
+                self.logger.info(f"Skipping category {sub_cat_item['name']}.")
                 return []
 
-        if self._yielded_subcategory_names.count(sub_cat_item.name) > 1:
+        if self._yielded_subcategory_names.count(sub_cat_item["name"]) > 1:
             self.logger.info(
-                f"Skipping category ({sub_cat_item.parent}/{sub_cat_item.name}) to avoid duplicated scrawling of sub category."
+                f"Skipping category ({sub_cat_item['parent']}/{sub_cat_item['name']}) to avoid duplicated scrawling of sub category."
             )
             return []
 
         cb_kwargs = {
-            "main_category": main_cat_item.name,
-            "sub_category": sub_cat_item.name,
+            "main_category": main_cat_item["name"],
+            "sub_category": sub_cat_item["name"],
         }
         if not self.seperate_business_ads:
-            self.scraping_stats.add_category(sub_cat_item.name, None)
+            self.scraping_stats.add_category(sub_cat_item["name"], None)
             return [
                 response.follow(
                     sub_cat_link,
@@ -157,8 +157,8 @@ class SearchSpider(scrapy.Spider):
                 )
             ]
         else:
-            self.scraping_stats.add_category(sub_cat_item.name, True)
-            self.scraping_stats.add_category(sub_cat_item.name, False)
+            self.scraping_stats.add_category(sub_cat_item["name"], True)
+            self.scraping_stats.add_category(sub_cat_item["name"], False)
             article_url_parts = response.urljoin(sub_cat_link).split("/")
             article_url_parts.insert(-1, "anbieter:{gewerblich_privat}")
             article_url_base = "/".join(article_url_parts)
@@ -194,11 +194,11 @@ class SearchSpider(scrapy.Spider):
                     name=sub_cat_li_.css("a::text").get(),
                     n_articles=sub_cat_li_.css(".text-light").get(),
                     timestamp=self.start_timestamp,
-                    parent=main_cat_item.name,
+                    parent=main_cat_item["name"],
                 )
 
                 yield sub_cat_item
-                self._yielded_subcategory_names.append(sub_cat_item.name)
+                self._yielded_subcategory_names.append(sub_cat_item["name"])
 
                 sub_cat_link = sub_cat_li_.css("a::attr(href)").get()
                 for req in self._follow_sub_category(
@@ -249,8 +249,8 @@ class SearchSpider(scrapy.Spider):
 
         if (
             self.max_age is not None
-            and article_item.timestamp  # top_ads no not have a timestamp
-            and self.start_timestamp - article_item.timestamp > self.max_age
+            and article_item["timestamp"]  # top_ads no not have a timestamp
+            and self.start_timestamp - article_item["timestamp"] > self.max_age
         ):
             self.logger.info(f"{abortion_message} age of article ({self.max_age}s).")
             self.scraping_stats.add_abortion_reaseon(
