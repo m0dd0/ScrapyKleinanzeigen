@@ -1,52 +1,71 @@
-from dataclasses import dataclass, field, asdict
-from typing import List
+import re
 
 import sqlalchemy as sa
 from sqlalchemy import orm
 
-# DESIGN DESCISSION:
-# we will use only dataclass as item type
-# this allows to use the ite.attribute API and therfore enabled the usage of intellisene
-# also it is a standard python datatype and it also allows for metadata
-# Also it allows to easyly set default value which cant be achieved with scrapy.item
-# the downside of not beeing able to use he full feature set of scrapy, includeing easier creation
-# of item loaders, customizing feed exports, etc. can be compensetaed easily
-# I would say that the extraction logic you can define in scrapy.Item(in/outpu_provessor=Processpor())
-# should rather be seperated from the item defintion because its rather part of the
-# scraping process (in the spider) than further processing, therfore this downside
-# is accepted without being a issue
-
-# TODO speed comparison to scrapy.item (no need for asdict)
+from .parsing import eval_price_string, eval_timestamp_str, integer_from_string
 
 
-@dataclass
-class EbkArticle:
-    name: str = field(default=None)
-    price: int = field(default=None)
-    negotiable: bool = field(default=None)
-    postal_code: str = field(default=None)
-    timestamp: int = field(default=None)
-    description: str = field(default=None)
-    sendable: str = field(default=None)
-    offer: bool = field(default=None)
-    tags: List[str] = field(default=None)
-    main_category: str = field(default=None)
-    sub_category: str = field(default=None)
-    is_business_ad: bool = field(default=None)
-    image_link: str = field(default=None)
-    pro_shop_link: str = field(default=None)
-    top_ad: bool = field(default=None)
-    highlight_ad: bool = field(default=None)
-    link: str = field(default=None)
-    crawl_timestamp: int = field(default=None)
+class EbkArticle(dict):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def from_raw(
+        cls,
+        name,
+        price_string,
+        postal_code,
+        timestamp,
+        description,
+        tags,
+        main_category,
+        sub_category,
+        is_business_ad,
+        image_link,
+        pro_shop_link,
+        top_ad,
+        highlight_ad,
+        link,
+        crawl_timestamp,
+    ):
+        tags = [t.lower() for t in tags]
+        return cls(
+            name=name,
+            price=eval_price_string(price_string),
+            negotiable="vb" in price_string.lower() if price_string else False,
+            postal_code=re.sub("\D", "", postal_code),
+            timestamp=eval_timestamp_str(timestamp),
+            description=description.removesuffix("..."),
+            sendable="versand möglich" in tags,
+            offer="gesuch" not in tags,
+            tags=tags,
+            main_category=main_category,
+            sub_category=sub_category,
+            is_business_ad=is_business_ad,
+            image_link=image_link,
+            pro_shop_link=f"https://www.ebay-kleinanzeigen.de{pro_shop_link}"
+            if pro_shop_link
+            else None,
+            top_ad=False if top_ad is None else True,
+            highlight_ad=False if highlight_ad is None else True,
+            link=f"https://www.ebay-kleinanzeigen.de{link}",
+            crawl_timestamp=crawl_timestamp,
+        )
 
 
-@dataclass
-class Category:
-    timestamp: int = field(default=None)
-    name: int = field(default=None)
-    n_articles: int = field(default=None)
-    parent: str = field(default=None)
+class Category(dict):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def from_raw(cls, timestamp, name, n_articles, parent):
+        return cls(
+            timestamp=timestamp,
+            name=name.strip(),
+            n_articles=integer_from_string(n_articles),
+            parent=parent,
+        )
 
 
 ### ORM MAPPERS
@@ -119,7 +138,7 @@ class EbkArticleORM(Base):
 
     @classmethod
     def from_item(cls, item: EbkArticle):
-        return cls(**asdict(item))
+        return cls(**item)
 
 
 class CategoryORM(Base):
@@ -139,4 +158,35 @@ class CategoryORM(Base):
 
     @classmethod
     def from_item(cls, item):
-        return cls(**asdict(item))
+        return cls(**item)
+
+
+class CategoryCrawlORM(Base):
+    __tablename__ = "stats"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    start_timestamp = sa.Column(sa.Integer)
+    duration = sa.Column(sa.Integer)
+    sub_category = sa.Column(sa.String)
+    is_business_ad = sa.Column(sa.Boolean)
+    n_articles = sa.Column(sa.Integer)
+    n_pages = sa.Column(sa.Integer)
+    abortion_reason = sa.Column(sa.String)
+
+    def __init__(
+        self,
+        start_timestamp,
+        duration,
+        sub_category,
+        is_business_ad,
+        n_articles,
+        n_pages,
+        abortion_reason,
+    ):
+        self.start_timestamp = start_timestamp
+        self.duration = duration
+        self.sub_category = sub_category
+        self.is_business_ad = is_business_ad
+        self.n_articles = n_articles
+        self.n_pages = n_pages
+        self.abortion_reason = abortion_reason

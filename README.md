@@ -97,3 +97,19 @@ them without gaining any new (or only very few articles).
 On the other side n shouldnt be to high to avoid missing articles in popular categories
 because they are already on page 50+.
 --> scrape every 10 minutes with an max age of 15min.
+
+## performance
+start_timestamp,duration,n_categories,total_pages,total_articles,pages_per_second,articles_per_second,max_pages,max_article,max_age,categories,seperate_business_ads,max_runtime
+1640890539,292,266,532,14112,1.821917808219178,48.32876712328767,2,,,,True,
+1640890857,154,266,266,7099,1.7272727272727273,46.0974025974026,1,,,,True,
+1640891060,36,266,266,266,7.388888888888889,7.388888888888889,50,1,,,True, # --> processsing/writing articles is the limiting factor
+1640891174,148,266,266,7099,1.7972972972972974,47.96621621621622,1,,,,True, # no json output --> makes no(less) difference
+1640891407,140,266,266,7099,1.9,50.707142857142856,1,,,,True, # no writing to database --> makes lass difference
+1640891749,131,266,266,7099,2.030534351145038,54.19083969465649,1,,,,True, # no loader logic
+1640891954,35,266,266,7099,7.6,202.82857142857142,1,,,,True, # no css selectors --> much faster --> html parsing is the bottleneck
+1640893443,36,266,266,7099,7.388888888888889,197.19444444444446,1,,,,True, # not using the loader for parsing html
+1640893904,37,266,266,7100,7.1891891891891895,191.8918918918919,1,,,,True, # using no loader again and checked output --> works
+1640894480,126,266,266,7100,2.111111111111111,56.34920634920635,1,,,,True, # using item based loader implementation --> loader has stull bad performance
+1640906113,35,266,266,7100,7.6,202.85714285714286,1,,,,True, # using custom article and loader implementation
+1640906038,36,266,266,7100,7.388888888888889,197.22222222222223,1,,,,True, # adding json output again
+1640905953,39,266,266,7100,6.82051282051282,182.05128205128204,1,,,,True, # adding database output again
