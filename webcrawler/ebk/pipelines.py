@@ -24,7 +24,6 @@ class DatabaseWriterPipe:
     #     ).scalar()
 
     def process_item(self, item, spider):
-        return item
         if isinstance(item, EbkArticle):
             article_orm = EbkArticleORM.from_item(item)
             # filtering take a lot of time (nearly doubles the needed time for scraping)
