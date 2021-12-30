@@ -1,6 +1,5 @@
 from datetime import datetime
 import csv
-from os import abort
 from pathlib import Path
 
 from tabulate import tabulate
@@ -11,7 +10,6 @@ from scrapy.utils.project import get_project_settings
 import sqlalchemy as sa
 from sqlalchemy import orm
 
-from ..loaders import ArticleLoader, CategoryLoader
 from ..items import Category, CategoryCrawlORM, EbkArticle, Base
 
 
@@ -133,24 +131,24 @@ class SearchSpider(scrapy.Spider):
     def _follow_sub_category(self, response, main_cat_item, sub_cat_item, sub_cat_link):
         if self.categories is not None:
             if not (
-                sub_cat_item.name in self.categories
-                or sub_cat_item.parent in self.categories
+                sub_cat_item["name"] in self.categories
+                or sub_cat_item["parent"] in self.categories
             ):
-                self.logger.info(f"Skipping category {sub_cat_item.name}.")
+                self.logger.info(f"Skipping category {sub_cat_item['name']}.")
                 return []
 
-        if self._yielded_subcategory_names.count(sub_cat_item.name) > 1:
+        if self._yielded_subcategory_names.count(sub_cat_item["name"]) > 1:
             self.logger.info(
-                f"Skipping category ({sub_cat_item.parent}/{sub_cat_item.name}) to avoid duplicated scrawling of sub category."
+                f"Skipping category ({sub_cat_item['parent']}/{sub_cat_item['name']}) to avoid duplicated scrawling of sub category."
             )
             return []
 
         cb_kwargs = {
-            "main_category": main_cat_item.name,
-            "sub_category": sub_cat_item.name,
+            "main_category": main_cat_item["name"],
+            "sub_category": sub_cat_item["name"],
         }
         if not self.seperate_business_ads:
-            self.scraping_stats.add_category(sub_cat_item.name, None)
+            self.scraping_stats.add_category(sub_cat_item["name"], None)
             return [
                 response.follow(
                     sub_cat_link,
@@ -159,8 +157,8 @@ class SearchSpider(scrapy.Spider):
                 )
             ]
         else:
-            self.scraping_stats.add_category(sub_cat_item.name, True)
-            self.scraping_stats.add_category(sub_cat_item.name, False)
+            self.scraping_stats.add_category(sub_cat_item["name"], True)
+            self.scraping_stats.add_category(sub_cat_item["name"], False)
             article_url_parts = response.urljoin(sub_cat_link).split("/")
             article_url_parts.insert(-1, "anbieter:{gewerblich_privat}")
             article_url_base = "/".join(article_url_parts)
@@ -181,29 +179,28 @@ class SearchSpider(scrapy.Spider):
         self._yielded_subcategory_names = []
 
         for main_cat_li_ in response.css(".contentbox .l-container-row"):
-            main_cat_h2_ = main_cat_li_.css(".treelist-headline")
-            main_cat_loader = CategoryLoader(Category(), main_cat_h2_)
-            main_cat_loader.add_css("name", "a::text")
-            main_cat_loader.add_css("n_articles", ".text-light::text")
-            main_cat_loader.add_value("timestamp", self.start_timestamp)
-            main_cat_loader.add_value("parent", None)
-            main_cat_item = main_cat_loader.load_item()
+            main_cat_h2_ = main_cat_li_.css(".treelist-headline")[0]
+            main_cat_item = Category.from_raw(
+                name=main_cat_h2_.css("a::text").get(),
+                n_articles=main_cat_h2_.css(".text-light::text").get(),
+                timestamp=self.start_timestamp,
+                parent=None,
+            )
             yield main_cat_item
 
             for sub_cat_li_ in main_cat_li_.css("ul li"):
 
-                sub_cat_loader = CategoryLoader(Category(), sub_cat_li_)
-                sub_cat_loader.add_css("name", "a::text")
-                sub_cat_loader.add_css("n_articles", ".text-light")
-                sub_cat_loader.add_value("timestamp", self.start_timestamp)
-                sub_cat_loader.add_value("parent", main_cat_item.name)
-
-                sub_cat_link = sub_cat_li_.css("a::attr(href)").get()
-                sub_cat_item = sub_cat_loader.load_item()
+                sub_cat_item = Category.from_raw(
+                    name=sub_cat_li_.css("a::text").get(),
+                    n_articles=sub_cat_li_.css(".text-light").get(),
+                    timestamp=self.start_timestamp,
+                    parent=main_cat_item["name"],
+                )
 
                 yield sub_cat_item
-                self._yielded_subcategory_names.append(sub_cat_item.name)
+                self._yielded_subcategory_names.append(sub_cat_item["name"])
 
+                sub_cat_link = sub_cat_li_.css("a::attr(href)").get()
                 for req in self._follow_sub_category(
                     response, main_cat_item, sub_cat_item, sub_cat_link
                 ):
@@ -252,8 +249,8 @@ class SearchSpider(scrapy.Spider):
 
         if (
             self.max_age is not None
-            and article_item.timestamp  # top_ads no not have a timestamp
-            and self.start_timestamp - article_item.timestamp > self.max_age
+            and article_item["timestamp"]  # top_ads no not have a timestamp
+            and self.start_timestamp - article_item["timestamp"] > self.max_age
         ):
             self.logger.info(f"{abortion_message} age of article ({self.max_age}s).")
             self.scraping_stats.add_abortion_reaseon(
@@ -292,39 +289,35 @@ class SearchSpider(scrapy.Spider):
 
         articles_ = response.css(".aditem")
         for article_ in articles_:
-            article_loader = ArticleLoader(EbkArticle(), article_)
-            article_loader.add_value("main_category", main_category)
-            article_loader.add_value("sub_category", sub_category)
-            article_loader.add_value("is_business_ad", is_business_ad)
-            article_loader.add_value("crawl_timestamp", self.start_timestamp)
-            article_loader.add_css("image_link", ".aditem-image img::attr(src)")
+            article_topleft_ = article_.css(".aditem-main--top--left")[0]
+            article_topright_ = article_.css(".aditem-main--top--right")[0]
+            article_middle_ = article_.css(".aditem-main--middle")[0]
+            article_bottom_ = article_.css(".aditem-main--bottom")[0]
 
-            topleft_subloader = article_loader.nested_css(".aditem-main--top--left")
-            topleft_subloader.add_css("postal_code", "::text")
-
-            topright_subloader = article_loader.nested_css(".aditem-main--top--right")
-            topright_subloader.add_css("top_ad", ".icon-feature-topad")
-            topright_subloader.add_css("highlight_ad", ".icon-feature-highlight")
-            topright_subloader.add_css("timestamp", "::text")
-
-            middle_subloader = article_loader.nested_css(".aditem-main--middle")
-            middle_subloader.add_css("name", "h2 a::text")
-            middle_subloader.add_css(
-                "description", ".aditem-main--middle--description::text"
-            )
-            middle_subloader.add_css("price", ".aditem-main--middle--price::text")
-            middle_subloader.add_css("negotiable", ".aditem-main--middle--price::text")
-            middle_subloader.add_css("link", "h2 a::attr(href)")
-
-            bottom_subloader = article_loader.nested_css(".aditem-main--bottom")
-            bottom_subloader.add_css("tags", ".text-module-end .simpletag::text")
-            bottom_subloader.add_css("offer", ".text-module-end .simpletag::text")
-            bottom_subloader.add_css("sendable", ".text-module-end .simpletag::text")
-            bottom_subloader.add_css(
-                "pro_shop_link", ".text-module-oneline a::attr(href)"
+            article_item = EbkArticle.from_raw(
+                main_category=main_category,
+                sub_category=sub_category,
+                is_business_ad=is_business_ad,
+                crawl_timestamp=self.start_timestamp,
+                image_link=article_.css(".imagebox::attr(data-imgsrc)").get(),
+                postal_code=article_topleft_.css("::text")[-1].get(),
+                top_ad=article_topright_.css(".icon-feature-topad").get(),
+                highlight_ad=article_topright_.css(".icon-feature-highlight").get(),
+                timestamp=article_topright_.css("::text")[-1].get(),
+                name=article_middle_.css("h2 a::text").get(),
+                description=article_middle_.css(
+                    ".aditem-main--middle--description::text"
+                ).get(),
+                price_string=article_middle_.css(
+                    ".aditem-main--middle--price::text"
+                ).get(),
+                link=article_middle_.css("h2 a::attr(href)").get(),
+                tags=article_bottom_.css(".text-module-end .simpletag::text").getall(),
+                pro_shop_link=article_bottom_.css(
+                    ".text-module-oneline a::attr(href)"
+                ).get(),
             )
 
-            article_item = article_loader.load_item()
             self.scraping_stats.increment_counter(
                 sub_category, is_business_ad, "articles"
             )

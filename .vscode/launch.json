@@ -14,11 +14,7 @@
         "search_spider",
         "--loglevel=DEBUG",
         "-a",
-        "categories=Reptilien",
-        "-a",
-        "max_age=900",
-        "-a",
-        "seperate_business_ads=False"
+        "max_pages=1"
       ],
       "cwd": "${workspaceFolder}/webcrawler",
       "console": "integratedTerminal",
