@@ -1,61 +1,71 @@
-from dataclasses import dataclass, field, asdict
-from typing import List
-from itemloaders.processors import MapCompose, TakeFirst, Compose, Identity
 import re
-from datetime import datetime, timedelta
-from typing import List
-
-from itemloaders import ItemLoader
-from itemloaders.processors import MapCompose, TakeFirst, Compose, Identity
-
 
 import sqlalchemy as sa
 from sqlalchemy import orm
 import scrapy
 
-# DESIGN DESCISSION:
-# we will use only dataclass as item type
-# this allows to use the ite.attribute API and therfore enabled the usage of intellisene
-# also it is a standard python datatype and it also allows for metadata
-# Also it allows to easyly set default value which cant be achieved with scrapy.item
-# the downside of not beeing able to use he full feature set of scrapy, includeing easier creation
-# of item loaders, customizing feed exports, etc. can be compensetaed easily
-# I would say that the extraction logic you can define in scrapy.Item(in/outpu_provessor=Processpor())
-# should rather be seperated from the item defintion because its rather part of the
-# scraping process (in the spider) than further processing, therfore this downside
-# is accepted without being a issue
-
-# TODO speed comparison to scrapy.item (no need for asdict)
+from .parsing import integer_from_string, get_article_datetime
 
 
-@dataclass
-class EbkArticle:
-    name: str = field(default=None)
-    price: int = field(default=None)
-    negotiable: bool = field(default=None)
-    postal_code: str = field(default=None)
-    timestamp: int = field(default=None)
-    description: str = field(default=None)
-    sendable: str = field(default=None)
-    offer: bool = field(default=None)
-    tags: List[str] = field(default=None)
-    main_category: str = field(default=None)
-    sub_category: str = field(default=None)
-    is_business_ad: bool = field(default=None)
-    image_link: str = field(default=None)
-    pro_shop_link: str = field(default=None)
-    top_ad: bool = field(default=None)
-    highlight_ad: bool = field(default=None)
-    link: str = field(default=None)
-    crawl_timestamp: int = field(default=None)
+class EbkArticle(scrapy.Item):
+    @classmethod
+    def from_raw(
+        cls,
+        name,
+        price_string,
+        postal_code,
+        timestamp,
+        description,
+        tags,
+        main_category,
+        sub_category,
+        is_business_ad,
+        image_link,
+        pro_shop_link,
+        top_ad,
+        highlight_ad,
+        link,
+        crawl_timestamp,
+    ):
+        return cls(
+            name=name,
+            price=0
+            if "zu verschenken" in price_string.lower()
+            else integer_from_string(price_string)
+            if price_string
+            else None,
+            negotiable="vb" in price_string.lower() if price_string else False,
+            postal_code=re.sub("\D", "", postal_code[-1]),
+            timestamp=int(get_article_datetime(timestamp).timestamp()),
+            description=description[0].removesuffix("..."),
+            sendable="versand möglich" not in tags,
+            offer="gesuch" not in tags,
+            tags=tags,
+            main_category=main_category,
+            sub_category=sub_category,
+            is_business_ad=is_business_ad,
+            image_link=f"https://www.ebay-kleinanzeigen.de{image_link}"
+            if image_link
+            else None,
+            pro_shop_link=f"https://www.ebay-kleinanzeigen.de{pro_shop_link}"
+            if pro_shop_link
+            else None,
+            top_ad=False if top_ad is None else True,
+            highlight_ad=False if highlight_ad is None else True,
+            link=f"https://www.ebay-kleinanzeigen.de{link}",
+            crawl_timestamp=crawl_timestamp,
+        )
 
 
-@dataclass
-class Category:
-    timestamp: int = field(default=None)
-    name: int = field(default=None)
-    n_articles: int = field(default=None)
-    parent: str = field(default=None)
+class Category(scrapy.Item):
+    @classmethod
+    def from_raw(cls, timestamp, name, n_articles, parent):
+        return cls(
+            timestamp=timestamp,
+            name=name.strip(),
+            n_articles=integer_from_string(n_articles),
+            parent=parent,
+        )
 
 
 ### ORM MAPPERS
@@ -128,7 +138,7 @@ class EbkArticleORM(Base):
 
     @classmethod
     def from_item(cls, item: EbkArticle):
-        return cls(**asdict(item))
+        return cls(**item)
 
 
 class CategoryORM(Base):
@@ -148,7 +158,7 @@ class CategoryORM(Base):
 
     @classmethod
     def from_item(cls, item):
-        return cls(**asdict(item))
+        return cls(**item)
 
 
 class CategoryCrawlORM(Base):
