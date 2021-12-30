@@ -107,3 +107,9 @@ start_timestamp,duration,n_categories,total_pages,total_articles,pages_per_secon
 1640891407,140,266,266,7099,1.9,50.707142857142856,1,,,,True, # no writing to database --> makes lass difference
 1640891749,131,266,266,7099,2.030534351145038,54.19083969465649,1,,,,True, # no loader logic
 1640891954,35,266,266,7099,7.6,202.82857142857142,1,,,,True, # no css selectors --> much faster --> html parsing is the bottleneck
+1640893443,36,266,266,7099,7.388888888888889,197.19444444444446,1,,,,True, # not using the loader for parsing html
+1640893904,37,266,266,7100,7.1891891891891895,191.8918918918919,1,,,,True, # using no loader again and checked output --> works
+1640894480,126,266,266,7100,2.111111111111111,56.34920634920635,1,,,,True, # using item based loader implementation --> loader has stull bad performance
+1640906113,35,266,266,7100,7.6,202.85714285714286,1,,,,True, # using custom article and loader implementation
+1640906038,36,266,266,7100,7.388888888888889,197.22222222222223,1,,,,True, # adding json output again
+1640905953,39,266,266,7100,6.82051282051282,182.05128205128204,1,,,,True, # adding database output again

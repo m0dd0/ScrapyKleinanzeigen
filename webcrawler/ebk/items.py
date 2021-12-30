@@ -29,22 +29,21 @@ class EbkArticle(dict):
         link,
         crawl_timestamp,
     ):
+        tags = [t.lower() for t in tags]
         return cls(
             name=name,
             price=eval_price_string(price_string),
             negotiable="vb" in price_string.lower() if price_string else False,
-            postal_code=re.sub("\D", "", postal_code[-1]),
+            postal_code=re.sub("\D", "", postal_code),
             timestamp=eval_timestamp_str(timestamp),
-            description=description[0].removesuffix("..."),
-            sendable="versand möglich" not in tags,
+            description=description.removesuffix("..."),
+            sendable="versand möglich" in tags,
             offer="gesuch" not in tags,
             tags=tags,
             main_category=main_category,
             sub_category=sub_category,
             is_business_ad=is_business_ad,
-            image_link=f"https://www.ebay-kleinanzeigen.de{image_link}"
-            if image_link
-            else None,
+            image_link=image_link,
             pro_shop_link=f"https://www.ebay-kleinanzeigen.de{pro_shop_link}"
             if pro_shop_link
             else None,

@@ -299,11 +299,11 @@ class SearchSpider(scrapy.Spider):
                 sub_category=sub_category,
                 is_business_ad=is_business_ad,
                 crawl_timestamp=self.start_timestamp,
-                image_link=article_.css(".aditem-image img::attr(src)").get(),
+                image_link=article_.css(".imagebox::attr(data-imgsrc)").get(),
                 postal_code=article_topleft_.css("::text")[-1].get(),
                 top_ad=article_topright_.css(".icon-feature-topad").get(),
                 highlight_ad=article_topright_.css(".icon-feature-highlight").get(),
-                timestamp=article_topright_.css("::text").get(),
+                timestamp=article_topright_.css("::text")[-1].get(),
                 name=article_middle_.css("h2 a::text").get(),
                 description=article_middle_.css(
                     ".aditem-main--middle--description::text"
