@@ -1,5 +1,6 @@
 from datetime import datetime
 import csv
+from os import abort
 from pathlib import Path
 
 from tabulate import tabulate
@@ -78,8 +79,9 @@ class SearchSpider(scrapy.Spider):
         max_age=None,
         categories=None,
         seperate_business_ads=True,
+        max_runtime=None,
         *args,
-        **kwargs,
+        # **kwargs,
     ):
         if max_pages is not None:
             max_pages = int(max_pages)
@@ -97,6 +99,10 @@ class SearchSpider(scrapy.Spider):
             categories = categories.split(",")
         self.categories = categories
         self.logger.info(f"categories: {self.categories}")
+        if max_runtime is not None:
+            max_runtime = int(max_runtime)
+        self.max_runtime = max_runtime
+        self.logger.info(f"max_runtime: {self.max_runtime}")
 
         self.seperate_business_ads = seperate_business_ads in (
             True,
@@ -118,7 +124,7 @@ class SearchSpider(scrapy.Spider):
         self.commit_delta = get_project_settings().get("DATABASE_COMMIT_DELTA")
         self.crawling_meta_path = get_project_settings().get("CRAWLING_META_PATH")
 
-        super().__init__(*args, **kwargs)
+        super().__init__(*args)
 
     def start_requests(self):
         start_url = "https://www.ebay-kleinanzeigen.de/s-katalog-orte.html"
@@ -205,7 +211,7 @@ class SearchSpider(scrapy.Spider):
 
     def _get_abortion_message_base(self, sub_category: str, is_business_ad: bool):
         business_type_mapping = {None: "all", True: "gewerblich", False: "privat"}
-        return f"Aborted crawling of {sub_category} ({business_type_mapping[is_business_ad]}) due to "
+        return f"Aborted crawling of {sub_category} ({business_type_mapping[is_business_ad]}) due to"
 
     def _check_abortion_page(self, articles, sub_category, is_business_ad):
         abortion_message = self._get_abortion_message_base(sub_category, is_business_ad)
@@ -224,6 +230,17 @@ class SearchSpider(scrapy.Spider):
             )
             self.scraping_stats.add_abortion_reaseon(
                 sub_category, is_business_ad, "pages"
+            )
+            return True
+
+        if (
+            self.max_runtime is not None
+            and int(datetime.now().timestamp()) - self.start_timestamp
+            > self.max_runtime
+        ):
+            self.logger.warning(f"{abortion_message} maximum crawling time reached.")
+            self.scraping_stats.add_abortion_reaseon(
+                sub_category, is_business_ad, "runtime"
             )
             return True
 

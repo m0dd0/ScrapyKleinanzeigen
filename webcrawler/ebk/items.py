@@ -16,6 +16,8 @@ from sqlalchemy import orm
 # scraping process (in the spider) than further processing, therfore this downside
 # is accepted without being a issue
 
+# TODO speed comparison to scrapy.item (no need for asdict)
+
 
 @dataclass
 class EbkArticle:
