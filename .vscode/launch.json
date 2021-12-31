@@ -14,7 +14,9 @@
         "search_spider",
         "--loglevel=DEBUG",
         "-a",
-        "max_pages=1"
+        "max_pages=1",
+        "-a",
+        "categories=Autos"
       ],
       "cwd": "${workspaceFolder}/webcrawler",
       "console": "integratedTerminal",

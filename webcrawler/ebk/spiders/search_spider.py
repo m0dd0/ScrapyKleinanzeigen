@@ -1,6 +1,7 @@
 from datetime import datetime
 import csv
 from pathlib import Path
+import pandas as pd
 
 from tabulate import tabulate
 import scrapy
@@ -37,14 +38,20 @@ class ScrapingStats:
     def add_abortion_reaseon(self, name, business, reason):
         self._data[(name, business)]["abortion_reason"] = reason
 
-    def as_list_of_dicts(self, additional_columns=None):
-        if additional_columns is None:
-            additional_columns = {}
+    def as_list_of_dicts(self):
         rows = [
-            additional_columns | {"sub_category": c, "is_business_ad": b} | d
+            {"sub_category": c, "is_business_ad": b} | d
             for (c, b), d in self._data.items()
         ]
         return rows
+
+    def as_dataframe(self):
+        business_type_mapping = {None: "all", True: "gewerblich", False: "privat"}
+        df_stats = pd.DataFrame(self.as_list_of_dicts())
+        df_stats["category_label"] = df_stats[["sub_category", "is_business_ad"]].agg(
+            lambda vs: f"{vs[0]} ({business_type_mapping[vs[1]]})", axis=1
+        )
+        return df_stats
 
     # def _set_start(self, name, business):
     #     self._data[(name, business)]["time"] = int(datetime.now().timestamp())
@@ -344,59 +351,50 @@ class SearchSpider(scrapy.Spider):
         )
 
     def closed(self, reason):
+        df_stats = self.scraping_stats.as_dataframe()
+        df_stats["start_timestamp"] = self.start_timestamp
         duration = int(datetime.now().timestamp()) - self.start_timestamp
-        additional_columns = {
-            "start_timestamp": self.start_timestamp,
-            "duration": duration,
-        }
-        rows = self.scraping_stats.as_list_of_dicts(additional_columns)
+        df_stats["duration"] = duration
 
-        total_articles = sum([r["articles"] for r in rows])
-        total_pages = sum([r["pages"] for r in rows])
+        df_spider = pd.DataFrame(
+            {
+                "start_timestamp": [self.start_timestamp],
+                "duration": [int(datetime.now().timestamp()) - self.start_timestamp],
+                "n_categories": [len(df_stats.index)],
+                "total_pages": [df_stats["pages"].sum()],
+                "total_articles": [df_stats["articles"].sum()],
+                "pages_per_second": [df_stats["pages"].sum() / duration],
+                "articles_per_second": [df_stats["articles"].sum() / duration],
+                "min_articles": [df_stats["articles"].min()],
+                "min_articles_category": [
+                    df_stats.loc[df_stats["articles"].idxmin()]["category_label"]
+                ],
+                "max_pages": [df_stats["pages"].max()],
+                "max_pages_category": [
+                    df_stats.loc[df_stats["pages"].idxmax()]["category_label"]
+                ],
+                "abortion_reasons": [df_stats["abortion_reason"].unique().tolist()],
+                "max_pages": [self.max_pages],
+                "max_articles": [self.max_articles],
+                "max_age": [self.max_age],
+                "categories": [self.categories],
+                "seperate_business_ads": [self.seperate_business_ads],
+                "max_runtime": [self.max_runtime],
+            }
+        )
 
         file_exists = Path(self.crawling_meta_path).exists()
-        with open(self.crawling_meta_path, "a", newline="") as csvfile:
-            writer = csv.writer(csvfile)
-            if not file_exists:
-                writer.writerow(
-                    [
-                        "start_timestamp",
-                        "duration",
-                        "n_categories",
-                        "total_pages",
-                        "total_articles",
-                        "pages_per_second",
-                        "articles_per_second",
-                        "max_pages",
-                        "max_article",
-                        "max_age",
-                        "categories",
-                        "seperate_business_ads",
-                        "max_runtime",
-                    ]
-                )
-            writer.writerow(
-                [
-                    self.start_timestamp,
-                    duration,
-                    len(rows),
-                    total_pages,
-                    total_articles,
-                    total_pages / duration,
-                    total_articles / duration,
-                    self.max_pages,
-                    self.max_articles,
-                    self.max_age,
-                    self.categories,
-                    self.seperate_business_ads,
-                    self.max_runtime,
-                ]
-            )
+        df_spider.to_csv(
+            self.crawling_meta_path, mode="a", header=not file_exists, index=False
+        )
 
-        for r in rows:
-            r["n_pages"] = r.pop("pages")
-            r["n_articles"] = r.pop("articles")
-            self.session.add(CategoryCrawlORM(**r))
-
+        df_stats = df_stats.rename(
+            columns={"pages": "n_pages", "articles": "n_articles"}
+        )
+        df_stats = df_stats.drop(["category_label"], axis=1)
+        df_stats.to_sql(
+            "stats", self.session.get_bind(), if_exists="append", index=False
+        )
         self.session.commit()
+
         self.logger.info(f"\n{self.scraping_stats}")
