@@ -11,7 +11,7 @@ from scrapy.utils.project import get_project_settings
 import sqlalchemy as sa
 from sqlalchemy import orm
 
-from ..items import Category, CategoryCrawlORM, EbkArticle, Base
+from ..items import Category, EbkArticle, Base
 
 
 class ScrapingStats:
