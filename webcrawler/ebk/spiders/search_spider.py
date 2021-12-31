@@ -365,11 +365,11 @@ class SearchSpider(scrapy.Spider):
                 "total_articles": [df_stats["articles"].sum()],
                 "pages_per_second": [df_stats["pages"].sum() / duration],
                 "articles_per_second": [df_stats["articles"].sum() / duration],
-                "min_articles": [df_stats["articles"].min()],
+                "min_articles_per_category": [df_stats["articles"].min()],
                 "min_articles_category": [
                     df_stats.loc[df_stats["articles"].idxmin()]["category_label"]
                 ],
-                "max_pages": [df_stats["pages"].max()],
+                "max_pages_per_category": [df_stats["pages"].max()],
                 "max_pages_category": [
                     df_stats.loc[df_stats["pages"].idxmax()]["category_label"]
                 ],
