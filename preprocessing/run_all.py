@@ -31,10 +31,11 @@ def run_all():
         / "crawling_statistics.csv"
     )
 
-    schedule.every().day.at("01:00").do(drop_duplicates, database_path)
-    schedule.every().day.at("02:00").do(
-        send_status_mail, statistics_path, database_path, email_data
-    )
+    def action():
+        drop_duplicates(database_path)
+        send_status_mail(statistics_path, database_path, email_data)
+
+    schedule.every().day.at("01:00").do(action)
 
     logging.info("Started scheduled preprocessing.")
 
