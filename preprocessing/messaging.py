@@ -3,10 +3,15 @@ from pathlib import Path
 import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import pandas as pd
 from datetime import datetime, timedelta
 import sqlite3
+import time
+import logging
+import sys
+
+import pandas as pd
 from tabulate import tabulate
+import schedule
 
 
 def send_mail(sender_email, sender_password, receiver_email, subject, text):
@@ -63,8 +68,23 @@ def send_status_mail(email_data):
         message,
     )
 
+    logging.info(f"Sended bot status report for {yesterday.strftime('%d.%m.%Y')}")
+
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        stream=sys.stdout,
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
     with open(Path(__file__).parent / "email_data.json", "r") as file:
         email_data = json.load(file)
-    send_status_mail(email_data)
+
+    schedule.every().day.at("21:07").do(send_status_mail, email_data)
+
+    logging.info("Started schedule bot status email sending.")
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
