@@ -57,7 +57,7 @@ database_path = (
 )
 DATABASE_URL = f"sqlite:///{database_path}"
 DATABASE_COMMIT_DELTA = 1000
-CRAWLING_META_PATH = Path(__file__).parent / "log" / "crawling_statitics.csv"
+CRAWLING_META_PATH = Path(__file__).parent / "log" / "crawling_statistics.csv"
 
 LOGSTATS_INTERVAL = 10
 
