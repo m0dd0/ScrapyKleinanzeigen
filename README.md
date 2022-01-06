@@ -113,3 +113,27 @@ start_timestamp,duration,n_categories,total_pages,total_articles,pages_per_secon
 1640906113,35,266,266,7100,7.6,202.85714285714286,1,,,,True, # using custom article and loader implementation
 1640906038,36,266,266,7100,7.388888888888889,197.22222222222223,1,,,,True, # adding json output again
 1640905953,39,266,266,7100,6.82051282051282,182.05128205128204,1,,,,True, # adding database output again
+
+## dynamic crawl time
+using a fixed interval at which all categories are crawled has a major downside:
+For the most category we only get a few new articles which increases the number of
+visited pages but doesnt provide many new articles but for some categories there
+are so many articles published that we cant get all new articles within the first 
+50 pages.
+
+There are some possible solutions:
+1.) Subdividing the crawl main pages by using state and "Art" for popular categoriews to increase the time between
+crawls while still getting all articles. --> we still need to crawl every hour and the crawler
+runs very long which might lead to a high number of duplicates
+2.) Run a seperate crawler for each category and schedule them depending on the number 
+of new articles or visited pages.
+After a the crawler has run for articles between last run and now given time they save how many
+pages they had to visit to get all new articles.
+If the number of pages is one the 
+The number of pages and the category and the start time is saved to the database.
+A scheduler in a seperate process checks the database every minute or so.
+To 
+
+How do we communicate between the spiders and the scheduler?
+    - using a seperate database
+    - using zeroMQ

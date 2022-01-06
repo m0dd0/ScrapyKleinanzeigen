@@ -15,14 +15,6 @@ def run_all():
     with open(Path(__file__).parent / "email_data.json", "r") as file:
         email_data = json.load(file)
 
-    yesterday = datetime.now() - timedelta(days=1)
-    yesterday = datetime(yesterday.year, yesterday.month, yesterday.day)
-    database_path = (
-        Path(__file__).parent.parent
-        / "data"
-        / f"ebk_data__{yesterday.year}_{yesterday.month}_{yesterday.day}.db"
-    )
-
     statistics_path = (
         Path(__file__).parent.parent
         / "webcrawler"
@@ -32,6 +24,13 @@ def run_all():
     )
 
     def action():
+        yesterday = datetime.now() - timedelta(days=1)
+        yesterday = datetime(yesterday.year, yesterday.month, yesterday.day)
+        database_path = (
+            Path(__file__).parent.parent
+            / "data"
+            / f"ebk_data__{yesterday.year}_{yesterday.month}_{yesterday.day}.db"
+        )
         drop_duplicates(database_path)
         send_status_mail(statistics_path, database_path, email_data)
 

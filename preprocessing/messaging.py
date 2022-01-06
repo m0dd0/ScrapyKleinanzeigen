@@ -59,13 +59,7 @@ def send_status_mail(statistics_path, database_path, email_data):
     logging.info(f"Sended bot status report for {yesterday.strftime('%d.%m.%Y')}")
 
 
-if __name__ == "__main__":
-    logging.basicConfig(
-        stream=sys.stdout,
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-
+def run_for_yesterdy_db():
     with open(Path(__file__).parent / "email_data.json", "r") as file:
         email_data = json.load(file)
 
@@ -85,12 +79,14 @@ if __name__ == "__main__":
         / "crawling_statistics.csv"
     )
 
-    schedule.every().day.at("01:00").do(
-        send_status_mail, statistics_path, db_path, email_data
+    send_status_mail(statistics_path, db_path, email_data)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        stream=sys.stdout,
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    logging.info("Started schedule bot status email sending.")
-
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    run_for_yesterdy_db()

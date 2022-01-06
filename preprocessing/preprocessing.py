@@ -30,13 +30,7 @@ def drop_duplicates(
     logging.info(f"Dropped duplicates for database '{database_path.stem}'.")
 
 
-if __name__ == "__main__":
-    logging.basicConfig(
-        stream=sys.stdout,
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-
+def run_for_yesterday_db():
     yesterday = datetime.now() - timedelta(days=1)
     yesterday = datetime(yesterday.year, yesterday.month, yesterday.day)
     db_path = (
@@ -45,10 +39,14 @@ if __name__ == "__main__":
         / f"ebk_data__{yesterday.year}_{yesterday.month}_{yesterday.day}.db"
     )
 
-    schedule.every().day.at("21:57").do(drop_duplicates, db_path)
+    drop_duplicates(db_path)
 
-    logging.info("Started scheduled removal of duplicates.")
 
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+if __name__ == "__main__":
+    logging.basicConfig(
+        stream=sys.stdout,
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
+    run_for_yesterday_db()
