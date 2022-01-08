@@ -2,6 +2,7 @@ from datetime import datetime
 import csv
 from pathlib import Path
 import pandas as pd
+import math
 
 from tabulate import tabulate
 import scrapy
@@ -85,28 +86,29 @@ class SearchSpider(scrapy.Spider):
         categories=None,
         seperate_business_ads=True,
         max_runtime=None,
+        min_timestamp=None,
         *args,
         # **kwargs,
     ):
-        if max_pages is not None:
-            max_pages = int(max_pages)
-        self.max_pages = max_pages
+        self.scraping_stats = ScrapingStats()
+        self._yielded_subcategory_names = []
+        self.start_timestamp = int(datetime.now().timestamp())
+
+        self.max_pages = math.inf if max_pages is None else int(max_pages)
         self.logger.info(f"max_pages: {self.max_pages}")
-        if max_articles is not None:
-            max_articles = int(max_articles)
-        self.max_articles = max_articles
+
+        self.max_articles = math.inf if max_articles is None else int(max_articles)
         self.logger.info(f"max_articles: {self.max_articles}")
-        if max_age is not None:
-            max_age = int(max_age)  # in seconds
-        self.max_age = max_age
-        self.logger.info(f"max_age: {self.max_age}")
-        if categories is not None:
-            categories = categories.split(",")
-        self.categories = categories
+
+        min_timestamp = 0 if min_timestamp is None else int(min_timestamp)
+        min_timestamp_age = 0 if max_age is None else self.start_timestamp - max_age
+        self.min_timestamp = max(min_timestamp, min_timestamp_age)
+        self.logger.info(f"min_timestamp: {datetime.fromtimestamp(self.min_timestamp)}")
+
+        self.categories = [] if categories is None else categories.split(",")
         self.logger.info(f"categories: {self.categories}")
-        if max_runtime is not None:
-            max_runtime = int(max_runtime)
-        self.max_runtime = max_runtime
+
+        self.max_runtime = math.inf if max_runtime is None else int(max_runtime)
         self.logger.info(f"max_runtime: {self.max_runtime}")
 
         self.seperate_business_ads = seperate_business_ads in (
@@ -117,10 +119,7 @@ class SearchSpider(scrapy.Spider):
             "True",
             "1",
         )
-
-        self.scraping_stats = ScrapingStats()
-        self.start_timestamp = int(datetime.now().timestamp())
-        self._yielded_subcategory_names = []
+        self.logger.info(f"seperate_business_ads: {self.seperate_business_ads}")
 
         database_url = get_project_settings().get("DATABASE_URL")
         engine = sa.create_engine(database_url)
@@ -228,7 +227,7 @@ class SearchSpider(scrapy.Spider):
             self.logger.warning(f"{abortion_message} blocked website.")
             return True
 
-        if self.max_pages is not None and stats["pages"] >= self.max_pages:
+        if stats["pages"] >= self.max_pages:
             self.logger.warning(
                 f"{abortion_message} maximum number of pages ({self.max_pages})."
             )
@@ -237,11 +236,7 @@ class SearchSpider(scrapy.Spider):
             )
             return True
 
-        if (
-            self.max_runtime is not None
-            and int(datetime.now().timestamp()) - self.start_timestamp
-            > self.max_runtime
-        ):
+        if int(datetime.now().timestamp()) - self.start_timestamp > self.max_runtime:
             self.logger.warning(f"{abortion_message} maximum crawling time reached.")
             self.scraping_stats.add_abortion_reaseon(
                 sub_category, is_business_ad, "runtime"
@@ -254,18 +249,16 @@ class SearchSpider(scrapy.Spider):
         abortion_message = self._get_abortion_message_base(sub_category, is_business_ad)
         stats = self.scraping_stats.get_category(sub_category, is_business_ad)
 
-        if (
-            self.max_age is not None
-            and article_item["timestamp"]  # top_ads no not have a timestamp
-            and self.start_timestamp - article_item["timestamp"] > self.max_age
-        ):
-            self.logger.info(f"{abortion_message} age of article ({self.max_age}s).")
+        if article_item["timestamp"] and article_item["timestamp"] < self.min_timestamp:
+            self.logger.info(
+                f"{abortion_message} timestamp of article ({datetime.fromtimestamp(self.min_timestamp)}s)."
+            )
             self.scraping_stats.add_abortion_reaseon(
                 sub_category, is_business_ad, "timestamp"
             )
             return True
 
-        if self.max_articles is not None and stats["articles"] >= self.max_articles:
+        if stats["articles"] >= self.max_articles:
             self.logger.warning(
                 f"{abortion_message} number of articles ({self.max_articles})."
             )
