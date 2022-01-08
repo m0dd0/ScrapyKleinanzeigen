@@ -28,25 +28,3 @@ def drop_duplicates(
     con.commit()
 
     logging.info(f"Dropped duplicates for database '{database_path.stem}'.")
-
-
-def run_for_yesterday_db():
-    yesterday = datetime.now() - timedelta(days=1)
-    yesterday = datetime(yesterday.year, yesterday.month, yesterday.day)
-    db_path = (
-        Path(__file__).parent.parent
-        / "data"
-        / f"ebk_data__{yesterday.year}_{yesterday.month}_{yesterday.day}.db"
-    )
-
-    drop_duplicates(db_path)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(
-        stream=sys.stdout,
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-
-    run_for_yesterday_db()

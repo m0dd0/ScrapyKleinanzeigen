@@ -57,36 +57,3 @@ def send_status_mail(statistics_path, database_path, email_data):
     )
 
     logging.info(f"Sended bot status report for {yesterday.strftime('%d.%m.%Y')}")
-
-
-def run_for_yesterdy_db():
-    with open(Path(__file__).parent / "email_data.json", "r") as file:
-        email_data = json.load(file)
-
-    yesterday = datetime.now() - timedelta(days=1)
-    yesterday = datetime(yesterday.year, yesterday.month, yesterday.day)
-    db_path = (
-        Path(__file__).parent.parent
-        / "data"
-        / f"ebk_data__{yesterday.year}_{yesterday.month}_{yesterday.day}.db"
-    )
-
-    statistics_path = (
-        Path(__file__).parent.parent
-        / "webcrawler"
-        / "ebk"
-        / "log"
-        / "crawling_statistics.csv"
-    )
-
-    send_status_mail(statistics_path, db_path, email_data)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(
-        stream=sys.stdout,
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-
-    run_for_yesterdy_db()
