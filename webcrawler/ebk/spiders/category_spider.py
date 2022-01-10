@@ -1,9 +1,12 @@
 import math
 from datetime import datetime
-from itertools import combinations
+from itertools import product
 
 import scrapy
 from scrapy.http import HtmlResponse
+import pandas as pd
+
+from ..items import EbkArticle, CrawlStatsORM
 
 
 class CategorySpider(scrapy.Spider):
@@ -18,13 +21,11 @@ class CategorySpider(scrapy.Spider):
         min_timestamp=None,
         max_runtime=None,
         seperate_business_ads=True,
-        use_states=False,
+        seperate_regions=False,
         *args,
     ):
         self.start_timestamp = int(datetime.now().timestamp())
         self.category_url = category_url
-
-        self.use_states = use_states
 
         self.max_pages = math.inf if max_pages is None else int(max_pages)
         self.logger.info(f"max_pages: {self.max_pages}")
@@ -49,6 +50,9 @@ class CategorySpider(scrapy.Spider):
             "1",
         )
         self.logger.info(f"seperate_business_ads: {self.seperate_business_ads}")
+
+        self.seperate_regions = seperate_regions
+        self.logger.info(f"seperate_regions: {self.seperate_regions}")
 
         self.n_articles = 0
         self.n_pages = 0
@@ -84,24 +88,24 @@ class CategorySpider(scrapy.Spider):
         ]
 
         if not self.seperate_business_ads and not self.seperate_regions:
-            injects = []
+            injects = [[]]
         elif self.seperate_business_ads and not self.seperate_region:
-            injects = is_business_url_parts
+            injects = [[inj] for inj in is_business_url_parts]
         elif self.seperate_regions and not self.seperate_business_ads:
-            injects = regions_url_parts
+            injects = [[inj] for inj in regions_url_parts]
         elif self.seperate_business_ads and self.sperate_Regions:
-            injects = ["/".join(combinations(regions_url_parts, is_business_url_parts))]
+            injects = product(regions_url_parts, is_business_url_parts)
+            injects = [list(t) for t in injects]
 
-        urls = [self.category_url]
-        if len(injects) > 0:
-            url_parts = self.category_url.split("/")
-            urls = ["/".join(url_parts.copy().insert(-1, inj)) for inj in injects]
+        url_parts = self.category_url.split("/")
+        urls = ["/".join(url_parts[:-1] + inj + url_parts[-1]) for inj in injects]
 
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse_article_page)
 
     def _handle_abortion(self, reasons, url):
         self.logger.info(f"Aborted crawling of {url} due to {reasons}.")
+        self.abortion_reasons.update(reasons)
 
     def _check_abortion(self, article_item=None):
         abortion_reasons = []
@@ -139,8 +143,8 @@ class CategorySpider(scrapy.Spider):
             article_bottom_ = article_.css(".aditem-main--bottom")[0]
 
             article_item = EbkArticle.from_raw(
-                main_category=main_category,
-                sub_category=sub_category,
+                main_category=None,
+                sub_category=self.category,
                 is_business_ad=is_business_ad,
                 crawl_timestamp=self.start_timestamp,
                 image_link=article_.css(".imagebox::attr(data-imgsrc)").get(),
@@ -180,3 +184,23 @@ class CategorySpider(scrapy.Spider):
             callback=self.parse_article_page,
             cb_kwargs={"is_business_ad": is_business_ad},
         )
+
+    def closed(self, reason):
+        stats_orm = CrawlStatsORM(
+            start_timestamp=self.start_timestamp,
+            category=self.category,
+            duration=int(datetime.now().timestamp()) - self.start_timestamp,
+            n_pages=self.n_pages,
+            n_articles=self.n_articles,
+            abortion_reasons=list(self.abortion_reasons),
+            max_pages=self.max_pages,
+            max_articles=self.max_articles,
+            min_timestamp=self.min_timestamp,
+            max_runtime=self.max_runtime,
+            seperate_business_ads=self.seperate_business_ads,
+            seperate_region=self.seperate_regions,
+        )
+        self.session.add(stats_orm)
+        self.session.commit()
+
+        self.logger.info(f"\n{stats_orm}")

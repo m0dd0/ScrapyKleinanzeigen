@@ -85,7 +85,7 @@ class EbkArticleORM(Base):
     description = sa.Column(sa.String)
     sendable = sa.Column(sa.Boolean)
     offer = sa.Column(sa.Boolean)
-    tags = sa.Column(sa.String)  # TODO maybe use mapping/normalization if needed
+    tags = sa.Column(sa.String)  # TODO maybe use normalization if needed
     main_category = sa.Column(sa.String)  # TODO relationship
     sub_category = sa.Column(sa.String)  # TODO relationship
     is_business_ad = sa.Column(sa.Boolean)
@@ -161,32 +161,54 @@ class CategoryORM(Base):
         return cls(**item)
 
 
-class CategoryCrawlORM(Base):
+class CrawlStatsORM(Base):
     __tablename__ = "stats"
 
     id = sa.Column(sa.Integer, primary_key=True)
     start_timestamp = sa.Column(sa.Integer)
     duration = sa.Column(sa.Integer)
-    sub_category = sa.Column(sa.String)
+    category = sa.Column(sa.String)  # TODO relationship
     is_business_ad = sa.Column(sa.Boolean)
     n_articles = sa.Column(sa.Integer)
     n_pages = sa.Column(sa.Integer)
-    abortion_reason = sa.Column(sa.String)
+    abortion_reasons = sa.Column(sa.String)  # TODO maybe use normalization if needed
+    max_pages = sa.Column(sa.Integer)
+    max_articles = sa.Column(sa.Integer)
+    min_timestamp = sa.Column(sa.Integer)
+    max_runtime = sa.Column(sa.Integer)
+    seperated_business_ads = sa.Column(sa.Boolean)
+    seperated_regions = sa.Column(sa.Boolean)
+    articles_per_second = sa.Column(sa.Float)
+    pages_per_second = sa.Column(sa.Float)
+    timespan = sa.Column(sa.Integer)
 
     def __init__(
         self,
         start_timestamp,
         duration,
-        sub_category,
+        category,
         is_business_ad,
         n_articles,
         n_pages,
-        abortion_reason,
+        abortion_reasons,
+        max_pages,
+        max_articles,
+        min_timestamp,
+        seperated_business_ads,
+        seperated_regions,
     ):
         self.start_timestamp = start_timestamp
         self.duration = duration
-        self.sub_category = sub_category
+        self.sub_category = category
         self.is_business_ad = is_business_ad
         self.n_articles = n_articles
         self.n_pages = n_pages
-        self.abortion_reason = abortion_reason
+        self.abortion_reason = abortion_reasons
+        self.max_pages = max_pages
+        self.max_articles = max_articles
+        self.min_timestamp = min_timestamp
+        self.seperated_business_ads = seperated_business_ads
+        self.seperated_regions = seperated_regions
+        self.articles_per_second = self.n_articles / self.duration
+        self.pages_per_second = self.n_pages / self.duration
+        self.timespan = self.start_timestamp - self.min_timestamp
