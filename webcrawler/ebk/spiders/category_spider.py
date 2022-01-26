@@ -26,6 +26,8 @@ class CategorySpider(scrapy.Spider):
     ):
         self.start_timestamp = int(datetime.now().timestamp())
         self.category_url = category_url
+        self.category = self.category_url.split("/")[-2].removeprefix("s-")
+        self.category_code = self.category_url.split("/")[-1]
 
         self.max_pages = math.inf if max_pages is None else int(max_pages)
         self.logger.info(f"max_pages: {self.max_pages}")
@@ -189,6 +191,7 @@ class CategorySpider(scrapy.Spider):
         stats_orm = CrawlStatsORM(
             start_timestamp=self.start_timestamp,
             category=self.category,
+            # category_code=self.category_code,
             duration=int(datetime.now().timestamp()) - self.start_timestamp,
             n_pages=self.n_pages,
             n_articles=self.n_articles,
